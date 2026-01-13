@@ -548,6 +548,44 @@ body {
     object-fit: contain;
 }
 
+.btn-shuffle {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-shuffle:hover {
+    background-color: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.btn-shuffle img {
+    width: 16px;
+    height: 16px;
+}
+
+.view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.view-header .search-bar {
+    flex: 1;
+    margin: 0;
+}
+
 .btn-icon:hover {
     background-color: var(--bg-hover);
 }
@@ -720,6 +758,17 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
+}
+
+.playback-source {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: none;
 }
 
 .player-center {

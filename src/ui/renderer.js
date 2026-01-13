@@ -4,6 +4,7 @@ const { ipcRenderer } = require('electron');
 // State
 let currentView = 'search';
 let currentPlaylistId = null;
+let currentPlaylistName = null;
 let backendReady = false;
 
 // Get current theme
@@ -181,6 +182,19 @@ function setupEventListeners() {
     // New Playlist
     btnNewPlaylist.addEventListener('click', createNewPlaylist);
 
+    // Shuffle buttons
+    document.getElementById('btn-shuffle-downloads')?.addEventListener('click', () => {
+        shufflePlay('downloads');
+    });
+    
+    document.getElementById('btn-shuffle-liked')?.addEventListener('click', () => {
+        shufflePlay('liked');
+    });
+    
+    document.getElementById('btn-shuffle-playlist')?.addEventListener('click', () => {
+        shufflePlay('playlist');
+    });
+
     // Theme switcher
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -293,6 +307,7 @@ function switchView(view) {
 function switchToPlaylistView(playlistId, playlistName) {
     currentView = 'playlist';
     currentPlaylistId = playlistId;
+    currentPlaylistName = playlistName;
 
     // Update navigation
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -594,9 +609,9 @@ function createTrackElement(track, options = {}) {
     div.appendChild(duration);
     div.appendChild(actions);
 
-    // Click to play
+    // Click to play - use context-aware playback
     div.onclick = () => {
-        window.playTrack(track);
+        playTrackInContext(track, options.context);
     };
 
     // Right-click context menu
@@ -606,6 +621,122 @@ function createTrackElement(track, options = {}) {
     };
 
     return div;
+}
+
+// Context-aware track playback
+function playTrackInContext(track, context) {
+    if (!context) {
+        // No context - play single track (from search)
+        window.playTrack(track);
+        return;
+    }
+
+    // Get all tracks from the current context
+    let allTracks = [];
+    let contextType = context.type;
+    let contextId = context.id || null;
+    let contextName = context.name || null;
+
+    const activeView = document.querySelector('.view.active');
+    if (!activeView) {
+        window.playTrack(track);
+        return;
+    }
+
+    const trackList = activeView.querySelector('.track-list');
+    if (trackList) {
+        // Get all track elements and extract track data
+        const trackElements = trackList.querySelectorAll('.track-item');
+        trackElements.forEach(el => {
+            const youtubeId = el.dataset.youtubeId;
+            if (youtubeId) {
+                // Find the track in our data by youtube_id
+                const trackData = el.__trackData;
+                if (trackData) {
+                    allTracks.push(trackData);
+                }
+            }
+        });
+    }
+
+    if (allTracks.length === 0) {
+        window.playTrack(track);
+        return;
+    }
+
+    // Find the index of the clicked track
+    const startIndex = allTracks.findIndex(t => t.youtube_id === track.youtube_id);
+
+    // Play with context
+    window.playContext({
+        type: contextType,
+        id: contextId,
+        name: contextName,
+        tracks: allTracks,
+        startIndex: startIndex >= 0 ? startIndex : 0,
+        shuffle: false
+    });
+}
+
+// Shuffle play from a view
+async function shufflePlay(viewType) {
+    let tracks = [];
+    let contextId = null;
+    let contextName = null;
+
+    try {
+        if (viewType === 'downloads') {
+            const result = await ipcRenderer.invoke('db-get-downloads');
+            if (result.success && result.data.length > 0) {
+                result.data.forEach(track => track.downloaded = true);
+                const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+                tracks = enrichResult.success ? enrichResult.data : result.data;
+                contextName = 'Downloads';
+            }
+        } else if (viewType === 'liked') {
+            const result = await ipcRenderer.invoke('db-get-liked');
+            if (result.success && result.data.length > 0) {
+                const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+                tracks = enrichResult.success ? enrichResult.data : result.data;
+                contextName = 'Liked Songs';
+            }
+        } else if (viewType === 'playlist') {
+            if (!currentPlaylistId) {
+                showError('No playlist selected');
+                return;
+            }
+            const result = await ipcRenderer.invoke('db-get-playlist-tracks', currentPlaylistId);
+            if (result.success && result.data.length > 0) {
+                const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+                tracks = enrichResult.success ? enrichResult.data : result.data;
+                contextId = currentPlaylistId;
+                contextName = currentPlaylistName || 'Playlist';
+            }
+        }
+
+        if (tracks.length === 0) {
+            showInfo('No tracks to play');
+            return;
+        }
+
+        // Start shuffle playback from random track
+        const randomIndex = Math.floor(Math.random() * tracks.length);
+        
+        window.playContext({
+            type: viewType,
+            id: contextId,
+            name: contextName,
+            tracks: tracks,
+            startIndex: randomIndex,
+            shuffle: true
+        });
+
+        showInfo(`Shuffle playing ${contextName}`);
+
+    } catch (error) {
+        console.error('Shuffle play error:', error);
+        showError('Failed to start shuffle playback');
+    }
 }
 
 // Downloads
@@ -621,7 +752,7 @@ async function loadDownloads() {
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
 
-            displayTracks(downloadsList, enrichedTracks);
+            displayTracks(downloadsList, enrichedTracks, { context: { type: 'downloads', name: 'Downloads' } });
         }
     } catch (error) {
         console.error('Failed to load downloads:', error);
@@ -641,7 +772,7 @@ async function loadLikedSongs() {
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
 
-            displayTracks(likedList, enrichedTracks);
+            displayTracks(likedList, enrichedTracks, { context: { type: 'liked', name: 'Liked Songs' } });
         }
     } catch (error) {
         console.error('Failed to load liked songs:', error);
@@ -892,7 +1023,13 @@ async function loadPlaylistTracks(playlistId) {
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
             
             const container = document.getElementById('playlist-tracks');
-            displayTracks(container, enrichedTracks);
+            displayTracks(container, enrichedTracks, { 
+                context: { 
+                    type: 'playlist', 
+                    id: playlistId, 
+                    name: currentPlaylistName || 'Playlist' 
+                } 
+            });
         }
     } catch (error) {
         console.error('Failed to load playlist tracks:', error);
@@ -1084,6 +1221,10 @@ function handleContextMenuAction(action) {
 // Playlist Context Menu
 const playlistContextMenuHtml = `
     <div class="context-menu-item" data-action="open">Open Playlist</div>
+    <div class="context-menu-item" data-action="play-next">Play Next</div>
+    <div class="context-menu-item" data-action="add-to-queue">Add to Queue</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="download-playlist">Download Playlist</div>
     <div class="context-menu-item" data-action="rename">Rename</div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" data-action="delete">Delete Playlist</div>
@@ -1142,6 +1283,15 @@ async function handlePlaylistContextMenuAction(action) {
     switch (action) {
         case 'open':
             switchToPlaylistView(contextMenuPlaylist.id, contextMenuPlaylist.name);
+            break;
+        case 'play-next':
+            await addPlaylistToQueue(contextMenuPlaylist, true);
+            break;
+        case 'add-to-queue':
+            await addPlaylistToQueue(contextMenuPlaylist, false);
+            break;
+        case 'download-playlist':
+            await downloadPlaylist(contextMenuPlaylist);
             break;
         case 'rename':
             await renamePlaylist(contextMenuPlaylist);
@@ -1238,6 +1388,89 @@ async function deletePlaylist(playlist) {
             showError(`Failed to delete playlist: ${result.error}`);
         }
     });
+}
+
+// Add Playlist to Queue
+async function addPlaylistToQueue(playlist, playNext = false) {
+    try {
+        const result = await ipcRenderer.invoke('db-get-playlist-tracks', playlist.id);
+        
+        if (result.success && result.data && result.data.length > 0) {
+            const tracks = result.data;
+            
+            if (playNext) {
+                // Add all tracks to play next (in reverse order to maintain order)
+                for (let i = tracks.length - 1; i >= 0; i--) {
+                    window.addToQueue(tracks[i], true);
+                }
+                showInfo(`Added ${tracks.length} track(s) from "${playlist.name}" to play next`);
+            } else {
+                // Add all tracks to end of queue
+                tracks.forEach(track => window.addToQueue(track, false));
+                showInfo(`Added ${tracks.length} track(s) from "${playlist.name}" to queue`);
+            }
+        } else {
+            showError('Playlist is empty or could not be loaded');
+        }
+    } catch (error) {
+        console.error('Failed to add playlist to queue:', error);
+        showError('Failed to add playlist to queue');
+    }
+}
+
+// Download Playlist
+async function downloadPlaylist(playlist) {
+    if (!backendReady) {
+        showError('Backend is still initializing...');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-playlist-tracks', playlist.id);
+        
+        if (result.success && result.data && result.data.length > 0) {
+            const tracks = result.data;
+            let addedCount = 0;
+            let skippedCount = 0;
+            
+            for (const track of tracks) {
+                // Skip if already downloaded
+                if (track.is_downloaded) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                try {
+                    const downloadResult = await ipcRenderer.invoke('download-track', {
+                        video_id: track.youtube_id,
+                        title: track.title,
+                        artist: track.artist || track.uploader,
+                        duration: track.duration,
+                        quality: getDownloadQuality()
+                    });
+                    
+                    if (downloadResult.success) {
+                        addedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to download track: ${track.title}`, error);
+                }
+            }
+            
+            if (addedCount > 0) {
+                showInfo(`Added ${addedCount} track(s) from "${playlist.name}" to download queue${skippedCount > 0 ? ` (${skippedCount} already downloaded)` : ''}`);
+            } else if (skippedCount > 0) {
+                showInfo(`All tracks from "${playlist.name}" are already downloaded`);
+            } else {
+                showError('No tracks could be added to download queue');
+            }
+        } else {
+            showError('Playlist is empty or could not be loaded');
+        }
+    } catch (error) {
+        console.error('Failed to download playlist:', error);
+        showError('Failed to download playlist');
+    }
 }
 
 // Remove Track from Current Playlist
@@ -1410,6 +1643,7 @@ function displayTracks(container, tracks, options = {}) {
 
     tracks.forEach(track => {
         const trackEl = createTrackElement(track, options);
+        trackEl.__trackData = track; // Store track data on element
         container.appendChild(trackEl);
     });
 }

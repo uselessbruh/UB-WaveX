@@ -13,9 +13,23 @@ class AudioPlayer {
         this.currentTrack = null;
         this.queue = [];
         this.queueIndex = -1;
-        this.preloadCache = new Map(); // Cache for preloaded tracks (max 5)
+        this.preloadCache = new Map(); // Cache for preloaded tracks (max 5 or 30 mins)
         this.maxPreloadTracks = 5;
+        this.maxPreloadDuration = 1800; // 30 minutes in seconds
         this.isPlaying = false;
+        
+        // Playback context tracking
+        this.playbackContext = {
+            type: null, // 'online', 'playlist', 'liked', 'downloads'
+            id: null, // playlist ID if applicable
+            name: null, // Display name (e.g., playlist name)
+            tracks: [], // Full list of tracks in current context
+            shuffle: false // Shuffle state
+        };
+        
+        // Shuffle state
+        this.shuffledIndices = [];
+        this.originalQueue = [];
 
         // DOM elements
         this.btnPlayPause = document.getElementById('btn-play-pause');
@@ -125,20 +139,109 @@ class AudioPlayer {
     }
 
     async playTrack(track) {
-        // Clear queue and start single track playback
+        // Single track playback (from search/online) - no auto-play next
+        this.playbackContext = {
+            type: 'online',
+            id: null,
+            name: null,
+            tracks: [track],
+            shuffle: false
+        };
         this.queue = [track];
         this.queueIndex = 0;
         await this.loadAndPlayTrack(track);
+        this.updatePlaybackSourceUI();
     }
 
     async playQueue(tracks, startIndex = 0) {
-        // Play a list of tracks as a queue
+        // Play a list of tracks as a queue (deprecated - use playContext instead)
         this.queue = tracks;
         this.queueIndex = startIndex;
         await this.loadAndPlayTrack(tracks[startIndex]);
 
         // Preload upcoming tracks
         this.preloadUpcomingTracks();
+    }
+
+    async playContext(context) {
+        // Play from a specific context (playlist, liked, downloads)
+        // context = { type: 'playlist'|'liked'|'downloads', id, name, tracks, startIndex, shuffle }
+        this.playbackContext = {
+            type: context.type,
+            id: context.id || null,
+            name: context.name || this.getContextDisplayName(context.type),
+            tracks: context.tracks || [],
+            shuffle: context.shuffle || false
+        };
+
+        // Setup queue based on shuffle
+        if (context.shuffle) {
+            this.enableShuffle(context.tracks, context.startIndex || 0);
+        } else {
+            this.queue = [...context.tracks];
+            this.queueIndex = context.startIndex || 0;
+        }
+
+        if (this.queue.length > 0) {
+            await this.loadAndPlayTrack(this.queue[this.queueIndex]);
+            this.preloadUpcomingTracks();
+            this.updatePlaybackSourceUI();
+        }
+    }
+
+    getContextDisplayName(type) {
+        switch (type) {
+            case 'liked': return 'Liked Songs';
+            case 'downloads': return 'Downloads';
+            case 'online': return null;
+            default: return null;
+        }
+    }
+
+    enableShuffle(tracks, currentIndex = 0) {
+        // Create shuffled indices array
+        this.originalQueue = [...tracks];
+        const currentTrack = tracks[currentIndex];
+        
+        // Create array of all indices except current
+        const indices = tracks.map((_, i) => i).filter(i => i !== currentIndex);
+        
+        // Fisher-Yates shuffle
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        
+        // Put current track first, then shuffled tracks
+        this.shuffledIndices = [currentIndex, ...indices];
+        this.queue = this.shuffledIndices.map(i => tracks[i]);
+        this.queueIndex = 0; // Current track is now at index 0
+        this.playbackContext.shuffle = true;
+    }
+
+    disableShuffle() {
+        if (this.originalQueue.length > 0 && this.currentTrack) {
+            // Find current track in original queue
+            const currentIndex = this.originalQueue.findIndex(
+                t => t.youtube_id === this.currentTrack.youtube_id
+            );
+            
+            this.queue = [...this.originalQueue];
+            this.queueIndex = currentIndex >= 0 ? currentIndex : 0;
+            this.playbackContext.shuffle = false;
+            this.shuffledIndices = [];
+            this.originalQueue = [];
+        }
+    }
+
+    toggleShuffle() {
+        if (this.playbackContext.shuffle) {
+            this.disableShuffle();
+        } else if (this.playbackContext.tracks.length > 0) {
+            this.enableShuffle(this.playbackContext.tracks, this.queueIndex);
+        }
+        this.updatePlaybackSourceUI();
+        return this.playbackContext.shuffle;
     }
 
     async loadAndPlayTrack(track) {
@@ -200,11 +303,17 @@ class AudioPlayer {
     }
 
     async preloadUpcomingTracks() {
-        // Preload next tracks in queue (up to maxPreloadTracks)
+        // Preload next tracks in queue (up to maxPreloadTracks or maxPreloadDuration)
         const tracksToPreload = [];
+        let totalDuration = 0;
 
         for (let i = 1; i <= this.maxPreloadTracks && (this.queueIndex + i) < this.queue.length; i++) {
             const track = this.queue[this.queueIndex + i];
+
+            // Stop if we exceed 30 minutes
+            if (totalDuration + (track.duration || 0) > this.maxPreloadDuration) {
+                break;
+            }
 
             // Skip if already cached or downloaded
             if (this.preloadCache.has(track.youtube_id) || track.downloaded) {
@@ -212,6 +321,7 @@ class AudioPlayer {
             }
 
             tracksToPreload.push(track);
+            totalDuration += track.duration || 0;
         }
 
         // Preload tracks in background
@@ -227,7 +337,8 @@ class AudioPlayer {
                     this.preloadCache.set(track.youtube_id, {
                         url: result.data.url,
                         track: track,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        duration: track.duration || 0
                     });
 
                     // Maintain cache size limit
@@ -240,14 +351,22 @@ class AudioPlayer {
     }
 
     cleanupPreloadCache() {
-        // Keep only the most recent maxPreloadTracks
+        // Keep only the most recent tracks within limits
         if (this.preloadCache.size > this.maxPreloadTracks) {
             const entries = Array.from(this.preloadCache.entries());
+            
+            // Calculate total duration
+            let totalDuration = entries.reduce((sum, [, data]) => sum + (data.duration || 0), 0);
+            
+            // Sort by timestamp (oldest first)
             entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
 
-            // Remove oldest entries
-            const toRemove = entries.slice(0, entries.length - this.maxPreloadTracks);
-            toRemove.forEach(([key]) => this.preloadCache.delete(key));
+            // Remove oldest entries if over limits
+            while (entries.length > this.maxPreloadTracks || totalDuration > this.maxPreloadDuration) {
+                const [key, data] = entries.shift();
+                this.preloadCache.delete(key);
+                totalDuration -= (data.duration || 0);
+            }
         }
     }
 
@@ -275,6 +394,44 @@ class AudioPlayer {
                 this.playerTitle.classList.add('scrolling');
             }
         }, 100);
+    }
+
+    updatePlaybackSourceUI() {
+        // Update UI to show where music is playing from
+        const sourceElement = document.getElementById('playback-source');
+        
+        if (!sourceElement) {
+            // Create source element if it doesn't exist
+            const wrapper = document.querySelector('.player-title-wrapper');
+            if (wrapper) {
+                const source = document.createElement('div');
+                source.id = 'playback-source';
+                source.className = 'playback-source';
+                wrapper.appendChild(source);
+            }
+        }
+        
+        const source = document.getElementById('playback-source');
+        if (source) {
+            if (this.playbackContext.type && this.playbackContext.type !== 'online') {
+                let displayText = '';
+                
+                if (this.playbackContext.name) {
+                    displayText = this.playbackContext.name;
+                } else {
+                    displayText = this.getContextDisplayName(this.playbackContext.type);
+                }
+                
+                if (this.playbackContext.shuffle) {
+                    displayText += ' • Shuffle';
+                }
+                
+                source.textContent = displayText;
+                source.style.display = 'block';
+            } else {
+                source.style.display = 'none';
+            }
+        }
     }
 
     markTrackAsPlaying(track) {
@@ -325,9 +482,28 @@ class AudioPlayer {
         if (playNext && this.queueIndex >= 0) {
             // Insert after current track
             this.queue.splice(this.queueIndex + 1, 0, track);
+            
+            // If in shuffle mode, also update originalQueue
+            if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
+                this.originalQueue.splice(this.queueIndex + 1, 0, track);
+            }
         } else {
             // Add to end of queue
             this.queue.push(track);
+            
+            // If in shuffle mode, also update originalQueue
+            if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
+                this.originalQueue.push(track);
+            }
+        }
+        
+        // Update context tracks if adding to an active context
+        if (this.playbackContext.tracks.length > 0) {
+            if (playNext) {
+                this.playbackContext.tracks.splice(this.queueIndex + 1, 0, track);
+            } else {
+                this.playbackContext.tracks.push(track);
+            }
         }
     }
 
@@ -363,8 +539,20 @@ class AudioPlayer {
     }
 
     async onTrackEnded() {
-        // Auto-play next track in queue
-        if (this.queueIndex < this.queue.length - 1) {
+        // Auto-play next track based on context
+        if (this.playbackContext.type === 'online') {
+            // Single track from search - don't auto-play
+            this.isPlaying = false;
+            const playPauseIcon = this.btnPlayPause.querySelector('.play-pause-icon');
+            if (playPauseIcon) {
+                const theme = document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark';
+                const suffix = theme === 'light' ? 'Black' : 'White';
+                playPauseIcon.src = `../public/play${suffix}.png`;
+                playPauseIcon.dataset.icon = 'play';
+                playPauseIcon.alt = 'Play';
+            }
+        } else if (this.queueIndex < this.queue.length - 1) {
+            // Auto-play next in context (playlist, liked, downloads, or custom queue)
             await this.playNext();
         } else {
             // Queue finished
@@ -542,5 +730,7 @@ function exposePlayerFunctions() {
     window.player = player;
     window.playTrack = (track) => player.playTrack(track);
     window.playQueue = (tracks, startIndex = 0) => player.playQueue(tracks, startIndex);
+    window.playContext = (context) => player.playContext(context);
     window.addToQueue = (track, playNext = false) => player.addToQueue(track, playNext);
+    window.toggleShuffle = () => player.toggleShuffle();
 }
