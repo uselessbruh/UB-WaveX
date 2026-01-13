@@ -1,6 +1,8 @@
 {
-    "buildCommand": null,
-    "outputDirectory": "mainpage",
-    "cleanUrls": true,
-    "trailingSlash": false
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/mainpage/$1"
+        }
+    ]
 }
