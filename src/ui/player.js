@@ -62,7 +62,7 @@ class AudioPlayer {
         this.seekBar.addEventListener('input', (e) => {
             const time = (e.target.value / 100) * this.audio.duration;
             this.audio.currentTime = time;
-            
+
             // Update visual immediately - only show black if progress > 0
             const progress = e.target.value;
             if (progress > 0) {
@@ -71,7 +71,7 @@ class AudioPlayer {
                 this.seekBar.style.background = 'var(--bg-tertiary)';
             }
         });
-        
+
         // Initially disable seek bar
         this.seekBar.disabled = true;
         this.seekBar.value = 0;
@@ -80,14 +80,14 @@ class AudioPlayer {
         // Volume
         this.volumeBar.addEventListener('input', (e) => {
             this.audio.volume = e.target.value / 100;
-            
+
             // Update visual - hide black fill when volume is 0
             if (e.target.value == 0) {
                 this.volumeBar.classList.add('muted');
             } else {
                 this.volumeBar.classList.remove('muted');
             }
-            
+
             this.saveVolume();
             this.updateVolumeIcon();
         });
@@ -189,7 +189,7 @@ class AudioPlayer {
 
             // Mark track as playing in UI
             this.markTrackAsPlaying(track);
-            
+
             // Save playback state
             this.savePlaybackState();
 
@@ -254,21 +254,21 @@ class AudioPlayer {
     updatePlayerUI(track) {
         const title = track.title || 'Unknown Title';
         const artist = track.artist_name || track.artist || track.uploader || 'Unknown Artist';
-        
+
         this.playerTitle.textContent = title;
         this.playerArtist.textContent = artist;
-        
+
         // Enable seek bar when track is loaded
         this.seekBar.disabled = false;
-        
+
         // Remove scrolling class first
         this.playerTitle.classList.remove('scrolling');
-        
+
         // Add scrolling if title is long (check actual width)
         setTimeout(() => {
             const titleWidth = this.playerTitle.offsetWidth;
             const containerWidth = this.playerTitle.parentElement.offsetWidth;
-            
+
             if (titleWidth > containerWidth) {
                 // Duplicate text with separator for seamless scrolling
                 this.playerTitle.textContent = title + '    •    ' + title + '    •    ' + title;
@@ -393,14 +393,14 @@ class AudioPlayer {
         if (this.audio.duration) {
             const progress = (this.audio.currentTime / this.audio.duration) * 100;
             this.seekBar.value = progress;
-            
+
             // Update visual progress - only show black if progress > 0
             if (progress > 0) {
                 this.seekBar.style.background = `linear-gradient(to right, #000 0%, #000 ${progress}%, var(--bg-tertiary) ${progress}%, var(--bg-tertiary) 100%)`;
             } else {
                 this.seekBar.style.background = 'var(--bg-tertiary)';
             }
-            
+
             this.currentTimeEl.textContent = window.appAPI.formatDuration(this.audio.currentTime);
         }
     }
@@ -432,7 +432,7 @@ class AudioPlayer {
         if (volumeIcon) {
             const theme = document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark';
             const suffix = theme === 'light' ? 'Black' : 'White';
-            
+
             if (this.audio.volume === 0) {
                 volumeIcon.src = `../public/mute${suffix}.png`;
                 volumeIcon.dataset.icon = 'mute';
@@ -460,12 +460,12 @@ class AudioPlayer {
             this.audio.volume = parseFloat(savedVolume);
             this.volumeBar.value = parseFloat(savedVolume) * 100;
         }
-        
+
         // Add muted class if volume is 0
         if (this.audio.volume === 0) {
             this.volumeBar.classList.add('muted');
         }
-        
+
         this.updateVolumeIcon();
     }
 
@@ -495,24 +495,24 @@ class AudioPlayer {
             try {
                 const state = JSON.parse(savedState);
                 console.log('Restoring playback state:', state);
-                
+
                 // Restore queue
                 this.queue = state.queue || [];
                 this.queueIndex = state.queueIndex || 0;
-                
+
                 // Load the track
                 await this.loadAndPlayTrack(state.track);
-                
+
                 // Seek to saved position
                 if (state.currentTime > 0) {
                     this.audio.currentTime = state.currentTime;
                 }
-                
+
                 // If it wasn't playing, pause it
                 if (!state.isPlaying) {
                     this.audio.pause();
                 }
-                
+
             } catch (error) {
                 console.error('Failed to restore playback state:', error);
             }

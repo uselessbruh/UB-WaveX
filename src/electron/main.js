@@ -272,18 +272,18 @@ ipcMain.handle('enrich-tracks', async (event, tracks) => {
   try {
     const enrichedTracks = tracks.map(track => {
       const enriched = { ...track };
-      
+
       // Check if track exists in database and get its ID
       const trackResult = db.exec(`SELECT id FROM tracks WHERE youtube_id = ?`, [track.youtube_id]);
-      
+
       if (trackResult.length > 0 && trackResult[0].values.length > 0) {
         const trackId = trackResult[0].values[0][0];
         enriched.id = trackId;
-        
+
         // Check if liked
         const likedResult = db.exec(`SELECT id FROM liked_songs WHERE track_id = ?`, [trackId]);
         enriched.liked = likedResult.length > 0 && likedResult[0].values.length > 0;
-        
+
         // Check if downloaded
         const downloadResult = db.exec(`SELECT file_path FROM downloads WHERE track_id = ?`, [trackId]);
         enriched.downloaded = downloadResult.length > 0 && downloadResult[0].values.length > 0;
@@ -294,10 +294,10 @@ ipcMain.handle('enrich-tracks', async (event, tracks) => {
         enriched.liked = false;
         enriched.downloaded = false;
       }
-      
+
       return enriched;
     });
-    
+
     return { success: true, data: enrichedTracks };
   } catch (error) {
     console.error('Failed to enrich tracks:', error);
@@ -310,9 +310,9 @@ ipcMain.handle('get-stream-url', async (event, params) => {
   try {
     const videoId = typeof params === 'string' ? params : params.videoId;
     const quality = typeof params === 'object' ? params.quality : 'high';
-    const streamData = await sendPythonRequest('get_stream_url', { 
+    const streamData = await sendPythonRequest('get_stream_url', {
       video_id: videoId,
-      quality: quality 
+      quality: quality
     });
     return { success: true, data: streamData };
   } catch (error) {
@@ -325,12 +325,12 @@ ipcMain.handle('download-track', async (event, trackData) => {
   try {
     // Add to queue instead of downloading immediately
     await addToDownloadQueue(trackData);
-    
+
     // Start processing queue if not already downloading
     if (!isDownloading) {
       processDownloadQueue();
     }
-    
+
     return { success: true, message: 'Added to download queue' };
   } catch (error) {
     return { success: false, error: error.message };
@@ -342,7 +342,7 @@ ipcMain.handle('download-track', async (event, trackData) => {
 async function initializeDownloadQueue() {
   try {
     console.log('Initializing download queue...');
-    
+
     // Create download_queue table if it doesn't exist
     db.run(`
       CREATE TABLE IF NOT EXISTS download_queue (
@@ -360,18 +360,18 @@ async function initializeDownloadQueue() {
       )
     `);
     saveDatabase();
-    
+
     // Reset any 'downloading' status to 'pending' (in case app crashed)
     db.run("UPDATE download_queue SET status = 'pending', started_at = NULL WHERE status = 'downloading'");
     saveDatabase();
-    
+
     // Remove completed downloads from queue
     db.run("DELETE FROM download_queue WHERE status = 'completed'");
     saveDatabase();
-    
+
     // Load pending downloads into memory
     const result = db.exec("SELECT * FROM download_queue WHERE status = 'pending' OR status = 'failed' ORDER BY added_at ASC");
-    
+
     if (result.length > 0) {
       downloadQueue.length = 0; // Clear array
       result[0].values.forEach(row => {
@@ -379,9 +379,9 @@ async function initializeDownloadQueue() {
         result[0].columns.forEach((col, i) => queueItem[col] = row[i]);
         downloadQueue.push(queueItem);
       });
-      
+
       console.log(`Loaded ${downloadQueue.length} pending downloads from queue`);
-      
+
       // Auto-resume downloads
       if (downloadQueue.length > 0) {
         console.log('Resuming download queue...');
@@ -401,35 +401,35 @@ async function addToDownloadQueue(trackData) {
       WHERE youtube_id = '${trackData.video_id}' 
       AND status IN ('pending', 'downloading')
     `);
-    
+
     if (existsInQueue.length > 0 && existsInQueue[0].values.length > 0) {
       console.log('Track already in download queue:', trackData.title);
       return;
     }
-    
+
     // Check if already downloaded
     const trackExists = db.exec(`
       SELECT t.id FROM tracks t
       INNER JOIN downloads d ON t.id = d.track_id
       WHERE t.youtube_id = '${trackData.video_id}'
     `);
-    
+
     if (trackExists.length > 0 && trackExists[0].values.length > 0) {
       console.log('Track already downloaded:', trackData.title);
       return;
     }
-    
+
     // Add to database queue
     db.run(`
       INSERT INTO download_queue (youtube_id, title, artist, duration, status)
       VALUES (?, ?, ?, ?, 'pending')
     `, [trackData.video_id, trackData.title, trackData.artist || 'Unknown', trackData.duration || 0]);
     saveDatabase();
-    
+
     // Get the inserted ID
     const idResult = db.exec('SELECT last_insert_rowid() as id');
     const queueId = idResult[0].values[0][0];
-    
+
     // Add to memory queue
     const queueItem = {
       id: queueId,
@@ -440,11 +440,11 @@ async function addToDownloadQueue(trackData) {
       status: 'pending',
       retry_count: 0
     };
-    
+
     downloadQueue.push(queueItem);
-    
+
     console.log(`Added to download queue: ${trackData.title} (Queue size: ${downloadQueue.length})`);
-    
+
     // Notify renderer
     if (mainWindow) {
       mainWindow.webContents.send('download-queue-updated', {
@@ -462,16 +462,16 @@ async function processDownloadQueue() {
   if (isDownloading || downloadQueue.length === 0) {
     return;
   }
-  
+
   isDownloading = true;
-  
+
   while (downloadQueue.length > 0) {
     const queueItem = downloadQueue[0];
     currentDownloadId = queueItem.id;
-    
+
     try {
       console.log(`Processing download: ${queueItem.title} (${downloadQueue.length} remaining)`);
-      
+
       // Update status to downloading
       db.run(`
         UPDATE download_queue 
@@ -479,7 +479,7 @@ async function processDownloadQueue() {
         WHERE id = ${queueItem.id}
       `);
       saveDatabase();
-      
+
       // Notify renderer
       if (mainWindow) {
         mainWindow.webContents.send('download-started', {
@@ -487,7 +487,7 @@ async function processDownloadQueue() {
           remaining: downloadQueue.length
         });
       }
-      
+
       // Perform the actual download
       const result = await sendPythonRequest('download_track', {
         video_id: queueItem.youtube_id,
@@ -495,10 +495,10 @@ async function processDownloadQueue() {
         artist: queueItem.artist,
         duration: queueItem.duration
       });
-      
+
       // Reload database from disk to see Python's changes
       await reloadDatabase();
-      
+
       // Mark as completed
       db.run(`
         UPDATE download_queue 
@@ -506,12 +506,12 @@ async function processDownloadQueue() {
         WHERE id = ${queueItem.id}
       `);
       saveDatabase();
-      
+
       // Remove from queue
       downloadQueue.shift();
-      
+
       console.log(`Download completed: ${queueItem.title}`);
-      
+
       // Notify renderer
       if (mainWindow) {
         mainWindow.webContents.send('download-completed', {
@@ -520,16 +520,16 @@ async function processDownloadQueue() {
           result
         });
       }
-      
+
       // Small delay between downloads
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
     } catch (error) {
       console.error(`Download failed: ${queueItem.title}`, error);
-      
+
       // Increment retry count
       const retryCount = (queueItem.retry_count || 0) + 1;
-      
+
       if (retryCount < 3) {
         // Retry up to 3 times
         db.run(`
@@ -538,11 +538,11 @@ async function processDownloadQueue() {
           WHERE id = ${queueItem.id}
         `, [error.message]);
         saveDatabase();
-        
+
         // Move to end of queue for retry
         queueItem.retry_count = retryCount;
         downloadQueue.push(downloadQueue.shift());
-        
+
         console.log(`Retrying download later (attempt ${retryCount}/3): ${queueItem.title}`);
       } else {
         // Mark as failed after 3 retries
@@ -552,13 +552,13 @@ async function processDownloadQueue() {
           WHERE id = ${queueItem.id}
         `, [error.message]);
         saveDatabase();
-        
+
         // Remove from queue
         downloadQueue.shift();
-        
+
         console.log(`Download permanently failed: ${queueItem.title}`);
       }
-      
+
       // Notify renderer
       if (mainWindow) {
         mainWindow.webContents.send('download-failed', {
@@ -570,12 +570,12 @@ async function processDownloadQueue() {
       }
     }
   }
-  
+
   isDownloading = false;
   currentDownloadId = null;
-  
+
   console.log('Download queue completed');
-  
+
   // Notify renderer
   if (mainWindow) {
     mainWindow.webContents.send('download-queue-completed');
@@ -619,14 +619,14 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
       INNER JOIN downloads d ON t.id = d.track_id 
       WHERE t.youtube_id = ?
     `, [youtubeId]);
-    
+
     if (trackResult.length === 0 || trackResult[0].values.length === 0) {
       return { success: false, error: 'Download not found' };
     }
-    
+
     const trackId = trackResult[0].values[0][0];
     const filePath = trackResult[0].values[0][1];
-    
+
     // Delete file from filesystem
     if (filePath && fs.existsSync(filePath)) {
       try {
@@ -637,13 +637,13 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
         // Continue with database deletion even if file deletion fails
       }
     }
-    
+
     // Remove from downloads table
     db.run('DELETE FROM downloads WHERE track_id = ?', [trackId]);
     saveDatabase();
-    
+
     console.log(`Deleted download for youtube_id: ${youtubeId}`);
-    
+
     return { success: true };
   } catch (error) {
     console.error('Failed to delete download:', error);

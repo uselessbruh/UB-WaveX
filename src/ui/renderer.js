@@ -32,7 +32,7 @@ let playlistSearchInput;
 // Debounce utility function
 function debounce(func, delay = 300) {
     let timeoutId;
-    return function(...args) {
+    return function (...args) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     likedSearchInput = document.getElementById('liked-search-input');
     settingsSearchInput = document.getElementById('settings-search-input');
     playlistSearchInput = document.getElementById('playlist-search-input');
-    
+
     setupEventListeners();
     setupNavigation();
     loadSearchHistory();
@@ -87,21 +87,21 @@ ipcRenderer.on('download-started', (event, data) => {
 ipcRenderer.on('download-completed', (event, data) => {
     console.log(`Download completed: ${data.queueItem.title}`);
     showSuccess(`Downloaded: ${data.queueItem.title}`);
-    
+
     // Update the track UI
     const track = {
         youtube_id: data.queueItem.youtube_id,
         downloaded: true
     };
     updateTrackDownloadStatus(track, true);
-    
+
     // Refresh downloads list
     loadDownloads();
 });
 
 ipcRenderer.on('download-failed', (event, data) => {
     console.log(`Download failed: ${data.queueItem.title}`);
-    
+
     if (data.willRetry) {
         showWarning(`Download failed, will retry: ${data.queueItem.title}`);
     } else {
@@ -126,7 +126,7 @@ function setupEventListeners() {
             btnClearSearch.style.display = 'none';
         }
     }, 500)); // 500ms debounce for online search
-    
+
     btnSearch.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSearch();
@@ -275,7 +275,7 @@ function switchToPlaylistView(playlistId, playlistName) {
 async function handleSearch() {
     const query = searchInput.value.trim();
     if (!query) return;
-    
+
     // Perform music search
     performSearch();
 }
@@ -315,7 +315,7 @@ function clearSearch() {
     searchInput.value = '';
     btnClearSearch.style.display = 'none';
     searchResults.innerHTML = '';
-    
+
     // Show search history and recent plays
     if (searchHistory) searchHistory.style.display = 'block';
     if (recentPlays) recentPlays.style.display = 'block';
@@ -327,7 +327,7 @@ async function searchInDownloads(query) {
     if (result.success) {
         // Mark all as downloaded
         result.data.forEach(track => track.downloaded = true);
-        
+
         if (!query || query.trim() === '') {
             // Show all downloads if query is empty
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
@@ -344,7 +344,7 @@ async function searchInDownloads(query) {
         // Enrich with liked status
         const enrichResult = await ipcRenderer.invoke('enrich-tracks', filtered);
         const enrichedTracks = enrichResult.success ? enrichResult.data : filtered;
-        
+
         displayTracks(downloadsList, enrichedTracks);
 
         if (filtered.length === 0) {
@@ -359,7 +359,7 @@ async function searchInLikedSongs(query) {
     if (result.success) {
         // Mark all as liked
         result.data.forEach(track => track.liked = true);
-        
+
         if (!query || query.trim() === '') {
             // Show all liked songs if query is empty
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
@@ -376,7 +376,7 @@ async function searchInLikedSongs(query) {
         // Enrich with downloaded status
         const enrichResult = await ipcRenderer.invoke('enrich-tracks', filtered);
         const enrichedTracks = enrichResult.success ? enrichResult.data : filtered;
-        
+
         displayTracks(likedList, enrichedTracks);
 
         if (filtered.length === 0) {
@@ -405,7 +405,7 @@ async function searchInPlaylist(query) {
 
         const enrichResult = await ipcRenderer.invoke('enrich-tracks', filtered);
         const enrichedTracks = enrichResult.success ? enrichResult.data : filtered;
-        
+
         const playlistTracks = document.getElementById('playlist-tracks');
         displayTracks(playlistTracks, enrichedTracks);
 
@@ -432,7 +432,7 @@ async function displaySearchResults(tracks) {
         const trackEl = createTrackElement(track);
         searchResults.appendChild(trackEl);
     });
-    
+
     updateSearchViewVisibility();
 }
 
@@ -471,7 +471,7 @@ function createTrackElement(track, options = {}) {
         const btnLike = document.createElement('button');
         btnLike.className = 'btn-track-action like-btn' + (track.liked ? ' liked' : '');
         btnLike.title = track.liked ? 'Unlike' : 'Like';
-        
+
         const likeIcon = document.createElement('img');
         // Always use liked.png for liked songs (red, universal)
         if (track.liked) {
@@ -487,7 +487,7 @@ function createTrackElement(track, options = {}) {
             likeIcon.dataset.icon = 'like';
             likeIcon.alt = 'Like';
         }
-        
+
         btnLike.appendChild(likeIcon);
         btnLike.onclick = (e) => {
             e.stopPropagation();
@@ -499,11 +499,11 @@ function createTrackElement(track, options = {}) {
     if (options.showDownloadButton !== false) {
         const btnDownload = document.createElement('button');
         btnDownload.className = 'btn-track-action download-btn';
-        
+
         const downloadIcon = document.createElement('img');
         const theme = document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark';
         const suffix = theme === 'light' ? 'Black' : 'White';
-        
+
         if (track.downloaded) {
             // Show downloaded indicator - clicking will delete
             downloadIcon.src = '../public/downloaded.png';
@@ -518,7 +518,7 @@ function createTrackElement(track, options = {}) {
             downloadIcon.alt = 'Download';
             btnDownload.title = 'Download';
         }
-        
+
         btnDownload.appendChild(downloadIcon);
         btnDownload.onclick = (e) => {
             e.stopPropagation();
@@ -539,7 +539,7 @@ function createTrackElement(track, options = {}) {
     btnMenu.style.fontSize = '20px';
     btnMenu.style.fontWeight = 'bold';
     btnMenu.style.color = 'var(--text-secondary)';
-    
+
     btnMenu.onclick = (e) => {
         e.stopPropagation();
         showContextMenu(e, track);
@@ -572,11 +572,11 @@ async function loadDownloads() {
         if (result.success) {
             // Mark all as downloaded
             result.data.forEach(track => track.downloaded = true);
-            
+
             // Enrich with liked status
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
-            
+
             displayTracks(downloadsList, enrichedTracks);
         }
     } catch (error) {
@@ -592,11 +592,11 @@ async function loadLikedSongs() {
         if (result.success) {
             // Mark all as liked and check if downloaded
             result.data.forEach(track => track.liked = true);
-            
+
             // Enrich with downloaded status
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
-            
+
             displayTracks(likedList, enrichedTracks);
         }
     } catch (error) {
@@ -617,7 +617,7 @@ async function toggleLike(track) {
             document.querySelectorAll(`.track-item[data-youtube-id="${track.youtube_id}"]`).forEach(trackEl => {
                 const likeBtn = trackEl.querySelector('.btn-track-action');
                 const likeIcon = likeBtn?.querySelector('img');
-                
+
                 if (likeIcon) {
                     if (result.liked) {
                         // Changed to liked - use red liked icon
@@ -668,26 +668,26 @@ function displayPlaylists(playlists) {
     playlists.forEach(playlist => {
         const div = document.createElement('div');
         div.className = 'playlist-item';
-        
+
         const nameSpan = document.createElement('span');
         nameSpan.className = 'playlist-name';
         nameSpan.textContent = playlist.name;
-        
+
         const menuBtn = document.createElement('button');
         menuBtn.className = 'playlist-menu-btn';
         menuBtn.title = 'Playlist options';
         menuBtn.innerHTML = '⋮'; // Vertical ellipsis character
         menuBtn.style.fontSize = '18px';
         menuBtn.style.fontWeight = 'bold';
-        
+
         menuBtn.onclick = (e) => {
             e.stopPropagation();
             showPlaylistContextMenu(e, playlist);
         };
-        
+
         div.appendChild(nameSpan);
         div.appendChild(menuBtn);
-        
+
         div.onclick = () => {
             document.querySelectorAll('.playlist-item').forEach(p =>
                 p.classList.remove('active')
@@ -695,13 +695,13 @@ function displayPlaylists(playlists) {
             div.classList.add('active');
             switchToPlaylistView(playlist.id, playlist.name);
         };
-        
+
         // Right-click context menu for playlist
         div.oncontextmenu = (e) => {
             e.preventDefault();
             showPlaylistContextMenu(e, playlist);
         };
-        
+
         playlistList.appendChild(div);
     });
 }
@@ -842,10 +842,10 @@ async function deleteDownload(track) {
         if (result.success) {
             showSuccess(`Deleted: ${track.title}`);
             track.downloaded = false;
-            
+
             // Update UI to show download button instead of downloaded indicator
             updateTrackDownloadStatus(track, false);
-            
+
             // Refresh downloads list
             loadDownloads();
         } else {
@@ -865,16 +865,16 @@ let currentMenuType = 'track'; // 'track' or 'playlist'
 function showContextMenu(event, track) {
     contextMenuTrack = track;
     currentMenuType = 'track';
-    
+
     // Store position for potential submenu
     window.lastContextMenuX = event.pageX;
     window.lastContextMenuY = event.pageY;
-    
+
     // Save original content if not already saved
     if (!originalContextMenuContent) {
         originalContextMenuContent = contextMenu.innerHTML;
     }
-    
+
     // Ensure track menu content is shown
     if (contextMenu.dataset.menuType === 'playlist') {
         contextMenu.innerHTML = originalContextMenuContent;
@@ -883,33 +883,33 @@ function showContextMenu(event, track) {
 
     // First show menu to calculate its dimensions
     contextMenu.classList.add('visible');
-    
+
     // Get menu dimensions
     const menuWidth = contextMenu.offsetWidth;
     const menuHeight = contextMenu.offsetHeight;
-    
+
     // Get viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // Calculate position
     let left = event.pageX;
     let top = event.pageY;
-    
+
     // Adjust if menu would go beyond right edge
     if (left + menuWidth > viewportWidth) {
         left = viewportWidth - menuWidth - 10;
     }
-    
+
     // Adjust if menu would go beyond bottom edge
     if (top + menuHeight > viewportHeight) {
         top = viewportHeight - menuHeight - 10;
     }
-    
+
     // Ensure menu stays within left and top boundaries
     left = Math.max(10, left);
     top = Math.max(10, top);
-    
+
     contextMenu.style.left = left + 'px';
     contextMenu.style.top = top + 'px';
 }
@@ -939,7 +939,7 @@ function handleContextMenuAction(action) {
     }
 
     contextMenu.classList.remove('visible');
-    
+
     // Restore track menu content if it was a playlist menu
     if (currentMenuType === 'playlist' && originalContextMenuContent) {
         setTimeout(() => {
@@ -961,53 +961,53 @@ const playlistContextMenuHtml = `
 function showPlaylistContextMenu(event, playlist) {
     contextMenuPlaylist = playlist;
     currentMenuType = 'playlist';
-    
+
     // Save original content if not already saved
     if (!originalContextMenuContent) {
         originalContextMenuContent = contextMenu.innerHTML;
     }
-    
+
     // Change to playlist menu content
     contextMenu.innerHTML = playlistContextMenuHtml;
     contextMenu.dataset.menuType = 'playlist';
-    
+
     // First show menu to calculate its dimensions
     contextMenu.classList.add('visible');
     contextMenu.dataset.menuType = 'playlist';
-    
+
     // Get menu dimensions
     const menuWidth = contextMenu.offsetWidth;
     const menuHeight = contextMenu.offsetHeight;
-    
+
     // Get viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // Calculate position
     let left = event.pageX;
     let top = event.pageY;
-    
+
     // Adjust if menu would go beyond right edge
     if (left + menuWidth > viewportWidth) {
         left = viewportWidth - menuWidth - 10;
     }
-    
+
     // Adjust if menu would go beyond bottom edge
     if (top + menuHeight > viewportHeight) {
         top = viewportHeight - menuHeight - 10;
     }
-    
+
     // Ensure menu stays within left and top boundaries
     left = Math.max(10, left);
     top = Math.max(10, top);
-    
+
     contextMenu.style.left = left + 'px';
     contextMenu.style.top = top + 'px';
 }
 
 async function handlePlaylistContextMenuAction(action) {
     if (!contextMenuPlaylist) return;
-    
+
     switch (action) {
         case 'open':
             switchToPlaylistView(contextMenuPlaylist.id, contextMenuPlaylist.name);
@@ -1019,9 +1019,9 @@ async function handlePlaylistContextMenuAction(action) {
             await deletePlaylist(contextMenuPlaylist);
             break;
     }
-    
+
     contextMenu.classList.remove('visible');
-    
+
     // Restore track menu content after closing
     if (originalContextMenuContent) {
         setTimeout(() => {
@@ -1119,43 +1119,43 @@ async function showAddToPlaylistDialog(track) {
     }
 
     const playlists = result.data;
-    
+
     // Build playlist menu HTML
     let playlistMenuHtml = '';
     playlists.forEach(playlist => {
         playlistMenuHtml += `<div class="context-menu-item" data-playlist-id="${playlist.id}">${playlist.name}</div>`;
     });
-    
+
     // Save current menu state
     const wasPlaylistMenu = currentMenuType === 'playlist';
     const previousContent = contextMenu.innerHTML;
-    
+
     // Set playlist selection menu
     contextMenu.innerHTML = playlistMenuHtml;
     contextMenu.dataset.menuType = 'playlist-selection';
-    
+
     // Position near the mouse
     const rect = contextMenu.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     let left = Math.min(window.lastContextMenuX || window.innerWidth / 2, viewportWidth - 220);
     let top = Math.min(window.lastContextMenuY || window.innerHeight / 2, viewportHeight - (playlists.length * 40 + 20));
-    
+
     left = Math.max(10, left);
     top = Math.max(10, top);
-    
+
     contextMenu.style.left = left + 'px';
     contextMenu.style.top = top + 'px';
     contextMenu.classList.add('visible');
-    
+
     // Handle playlist selection
     const handlePlaylistClick = async (e) => {
         const playlistId = e.target.dataset.playlistId;
         if (playlistId) {
             await addTrackToPlaylist(track, parseInt(playlistId));
             contextMenu.classList.remove('visible');
-            
+
             // Restore previous menu content
             setTimeout(() => {
                 contextMenu.innerHTML = wasPlaylistMenu ? playlistContextMenuHtml : (originalContextMenuContent || previousContent);
@@ -1164,9 +1164,9 @@ async function showAddToPlaylistDialog(track) {
             }, 200);
         }
     };
-    
+
     contextMenu.addEventListener('click', handlePlaylistClick);
-    
+
     // Close on outside click
     const closeHandler = (e) => {
         if (!contextMenu.contains(e.target)) {
@@ -1179,7 +1179,7 @@ async function showAddToPlaylistDialog(track) {
             document.removeEventListener('click', closeHandler);
         }
     };
-    
+
     setTimeout(() => {
         document.addEventListener('click', closeHandler);
     }, 100);
@@ -1189,13 +1189,13 @@ async function addTrackToPlaylist(track, playlistId) {
     try {
         // First, ensure the track exists in the database
         const trackId = track.id || await getOrCreateTrackId(track);
-        
+
         // Add track to playlist
         const result = await ipcRenderer.invoke('db-add-track-to-playlist', playlistId, trackId);
-        
+
         if (result.success) {
             showSuccess('Track added to playlist');
-            
+
             // If we're currently viewing this playlist, reload it
             if (currentView === 'playlist' && currentPlaylistId === playlistId) {
                 loadPlaylistTracks(playlistId);
@@ -1211,11 +1211,11 @@ async function addTrackToPlaylist(track, playlistId) {
 async function getOrCreateTrackId(track) {
     // Check if track exists in database
     const checkResult = await ipcRenderer.invoke('db-get-track-by-youtube-id', track.youtube_id);
-    
+
     if (checkResult.success && checkResult.data) {
         return checkResult.data.id;
     }
-    
+
     // Track doesn't exist, create it
     const createResult = await ipcRenderer.invoke('db-create-track', {
         youtube_id: track.youtube_id,
@@ -1223,11 +1223,11 @@ async function getOrCreateTrackId(track) {
         artist: track.artist_name || track.artist || track.uploader,
         duration: track.duration
     });
-    
+
     if (createResult.success) {
         return createResult.data.id;
     }
-    
+
     throw new Error('Failed to create track in database');
 }
 
@@ -1298,12 +1298,12 @@ function updateTrackDownloadStatus(track, isDownloaded = true) {
     document.querySelectorAll(`.track-item[data-youtube-id="${track.youtube_id}"]`).forEach(trackEl => {
         const actions = trackEl.querySelector('.track-actions');
         const downloadBtn = Array.from(actions.querySelectorAll('.btn-track-action.download-btn')).find(btn => btn);
-        
+
         if (downloadBtn) {
             const icon = downloadBtn.querySelector('img');
             const theme = document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark';
             const suffix = theme === 'light' ? 'Black' : 'White';
-            
+
             if (isDownloaded) {
                 // Change to downloaded indicator
                 icon.src = '../public/downloaded.png';
@@ -1336,12 +1336,12 @@ function getIconPath(iconName, theme = null) {
         const root = document.documentElement;
         theme = root.hasAttribute('data-theme') ? 'light' : 'dark';
     }
-    
+
     // Liked icon is always red (universal)
     if (iconName === 'liked') {
         return '../public/liked.png';
     }
-    
+
     // For theme-aware icons, use Black for light mode, White for dark mode
     const suffix = theme === 'light' ? 'Black' : 'White';
     return `../public/${iconName}${suffix}.png`;
@@ -1349,7 +1349,7 @@ function getIconPath(iconName, theme = null) {
 
 function updateAllIcons() {
     const theme = document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark';
-    
+
     // Update all theme-aware icons
     document.querySelectorAll('.theme-icon').forEach(icon => {
         const iconName = icon.dataset.icon;
@@ -1398,16 +1398,16 @@ function switchTheme(theme) {
 
 function loadTheme() {
     let theme = localStorage.getItem('theme');
-    
+
     // If no saved preference, detect system theme
     if (!theme) {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         theme = prefersDark ? 'dark' : 'light';
         console.log('Detected system theme:', theme);
     }
-    
+
     switchTheme(theme);
-    
+
     // Listen for system theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
         // Only auto-switch if user hasn't manually set a preference
@@ -1431,7 +1431,7 @@ function switchQuality(quality) {
 
     // Save preference
     localStorage.setItem('downloadQuality', quality);
-    
+
     console.log(`Download quality set to ${quality} kbps`);
 }
 
@@ -1456,7 +1456,7 @@ function switchStreamQuality(quality) {
 
     // Save preference
     localStorage.setItem('streamQuality', quality);
-    
+
     console.log(`Streaming quality set to ${quality}`);
 }
 
@@ -1472,25 +1472,25 @@ function getStreamQuality() {
 // Search History Functions
 function saveSearchHistory(query) {
     let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    
+
     // Remove if already exists
     history = history.filter(item => item !== query);
-    
+
     // Add to beginning
     history.unshift(query);
-    
+
     // Keep only last 10 searches
     history = history.slice(0, 10);
-    
+
     localStorage.setItem('searchHistory', JSON.stringify(history));
     loadSearchHistory();
 }
 
 function loadSearchHistory() {
     const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    
+
     searchHistoryList.innerHTML = '';
-    
+
     if (history.length > 0) {
         history.forEach(query => {
             const item = document.createElement('div');
@@ -1503,7 +1503,7 @@ function loadSearchHistory() {
             searchHistoryList.appendChild(item);
         });
     }
-    
+
     // Show/hide based on whether we have search results or history/recent plays
     updateSearchViewVisibility();
 }
@@ -1511,20 +1511,20 @@ function loadSearchHistory() {
 async function loadRecentPlays() {
     try {
         const result = await ipcRenderer.invoke('db-get-recent-plays');
-        
+
         recentPlaysList.innerHTML = '';
-        
+
         if (result.success && result.data.length > 0) {
             // Enrich with liked/downloaded status
             const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
             const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
-            
+
             enrichedTracks.slice(0, 10).forEach(track => {
                 const cube = createRecentPlayCube(track);
                 recentPlaysList.appendChild(cube);
             });
         }
-        
+
         updateSearchViewVisibility();
     } catch (error) {
         console.error('Failed to load recent plays:', error);
@@ -1536,7 +1536,7 @@ function updateSearchViewVisibility() {
     const hasHistory = history.length > 0;
     const hasRecentPlays = recentPlaysList && recentPlaysList.children.length > 0;
     const hasSearchResults = searchResults.children.length > 0 && !searchResults.children[0].classList.contains('empty-state');
-    
+
     if (currentView === 'search') {
         if (hasSearchResults) {
             // Show search results, hide everything else
@@ -1559,30 +1559,30 @@ function updateSearchViewVisibility() {
 function createRecentPlayCube(track) {
     const cube = document.createElement('div');
     cube.className = 'recent-play-cube';
-    
+
     // Track info
     const title = document.createElement('div');
     title.className = 'cube-title';
     title.textContent = track.title;
-    
+
     const artist = document.createElement('div');
     artist.className = 'cube-artist';
     artist.textContent = track.artist_name || track.artist || 'Unknown Artist';
-    
+
     cube.appendChild(title);
     cube.appendChild(artist);
-    
+
     // Click to play
     cube.onclick = () => {
         window.playTrack(track);
     };
-    
+
     // Right-click context menu
     cube.oncontextmenu = (e) => {
         e.preventDefault();
         showContextMenu(e, track);
     };
-    
+
     return cube;
 }
 
@@ -1593,7 +1593,7 @@ function hideSearchHistory() {
 // Filter Functions
 function filterSettings(query) {
     const settingsSections = document.querySelectorAll('.settings-section');
-    
+
     if (!query) {
         // Show all sections
         settingsSections.forEach(section => {
@@ -1628,7 +1628,7 @@ function filterSettings(query) {
     // Show message if no results
     const settingsContainer = document.querySelector('.settings-container');
     const existingMessage = settingsContainer.querySelector('.no-settings-results');
-    
+
     if (visibleCount === 0) {
         if (!existingMessage) {
             const noResults = document.createElement('div');

@@ -131,7 +131,8 @@
                             <div class="setting-item">
                                 <div class="setting-info">
                                     <label>Audio Quality</label>
-                                    <p class="setting-description">Choose download quality (higher quality = larger file size)</p>
+                                    <p class="setting-description">Choose download quality (higher quality = larger file
+                                        size)</p>
                                 </div>
                                 <div class="quality-toggle">
                                     <button class="quality-btn" data-quality="128">128 kbps</button>
@@ -148,13 +149,16 @@
                             <div class="setting-item">
                                 <div class="setting-info">
                                     <label>Streaming Quality</label>
-                                    <p class="setting-description">Choose playback quality for streaming (higher quality = more bandwidth)</p>
+                                    <p class="setting-description">Choose playback quality for streaming (higher quality
+                                        = more bandwidth)</p>
                                 </div>
                                 <div class="stream-quality-toggle">
-                                    <button class="stream-quality-btn" data-stream-quality="low">Low (Save Data)</button>
+                                    <button class="stream-quality-btn" data-stream-quality="low">Low (Save
+                                        Data)</button>
                                     <button class="stream-quality-btn" data-stream-quality="medium">Medium</button>
                                     <button class="stream-quality-btn active" data-stream-quality="high">High</button>
-                                    <button class="stream-quality-btn" data-stream-quality="best">Best Available</button>
+                                    <button class="stream-quality-btn" data-stream-quality="best">Best
+                                        Available</button>
                                 </div>
                             </div>
                         </div>
@@ -166,7 +170,8 @@
                                 <div class="about-info">
                                     <h4>UB-WaveX</h4>
                                     <p class="version">Version 1.0.0</p>
-                                    <p class="description">A powerful music streaming and download desktop application</p>
+                                    <p class="description">A powerful music streaming and download desktop application
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -222,7 +227,8 @@
                         <img src="../public/back5Black.png" class="theme-icon" data-icon="back5" alt="Back 5s">
                     </button>
                     <button id="btn-play-pause" class="btn-player btn-play-pause" title="Play">
-                        <img src="../public/playBlack.png" class="theme-icon play-pause-icon" data-icon="play" alt="Play">
+                        <img src="../public/playBlack.png" class="theme-icon play-pause-icon" data-icon="play"
+                            alt="Play">
                     </button>
                     <button id="btn-forward-10" class="btn-player btn-skip" title="Forward 5s">
                         <img src="../public/skip5Black.png" class="theme-icon" data-icon="skip5" alt="Skip 5s">
@@ -237,32 +243,32 @@
                 <button id="btn-volume" class="btn-player" title="Mute/Unmute">
                     <img src="../public/vol3Black.png" class="theme-icon volume-icon" data-icon="vol3" alt="Volume">
                 </button>
-            <input type="range" id="volume-bar" class="volume-bar" min="0" max="100" value="100" />
+                <input type="range" id="volume-bar" class="volume-bar" min="0" max="100" value="100" />
+            </div>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <p id="loading-message">Initializing...</p>
-    </div>
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p id="loading-message">Initializing...</p>
+        </div>
 
-    <!-- Context Menu -->
-    <div id="context-menu" class="context-menu">
-        <div class="context-menu-item" data-action="play">Play</div>
-        <div class="context-menu-item" data-action="play-next">Play Next</div>
-        <div class="context-menu-item" data-action="add-to-queue">Add to Queue</div>
-        <div class="context-menu-divider"></div>
-        <div class="context-menu-item" data-action="download">Download</div>
-        <div class="context-menu-item" data-action="like">Like</div>
-        <div class="context-menu-divider"></div>
-        <div class="context-menu-item" data-action="add-to-playlist">Add to Playlist</div>
-    </div>
+        <!-- Context Menu -->
+        <div id="context-menu" class="context-menu">
+            <div class="context-menu-item" data-action="play">Play</div>
+            <div class="context-menu-item" data-action="play-next">Play Next</div>
+            <div class="context-menu-item" data-action="add-to-queue">Add to Queue</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="download">Download</div>
+            <div class="context-menu-item" data-action="like">Like</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="add-to-playlist">Add to Playlist</div>
+        </div>
 
-    <audio id="audio-player" preload="auto"></audio>
+        <audio id="audio-player" preload="auto"></audio>
 
-    <script src="renderer.js"></script>
-    <script src="player.js"></script>
+        <script src="renderer.js"></script>
+        <script src="player.js"></script>
 </body>
 
 </html>

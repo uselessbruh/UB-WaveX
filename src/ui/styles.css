@@ -668,6 +668,7 @@ body {
     0% {
         transform: translateX(0);
     }
+
     100% {
         transform: translateX(calc(-100% - 40px));
     }
@@ -915,6 +916,7 @@ body {
     padding: 64px 24px;
     color: var(--text-secondary);
 }
+
 .search-history {
     padding: 24px;
 }
