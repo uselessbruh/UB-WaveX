@@ -1,6 +1,6 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "mainpage",
-  "cleanUrls": true,
-  "trailingSlash": false
+    "buildCommand": null,
+    "outputDirectory": "mainpage",
+    "cleanUrls": true,
+    "trailingSlash": false
 }
