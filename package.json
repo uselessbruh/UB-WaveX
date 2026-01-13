@@ -1,0 +1,69 @@
+{
+  "name": "ub-wavex",
+  "version": "1.0.0",
+  "description": "Desktop music streaming and downloading application",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:python": "cd src/python && pyinstaller --onefile --clean music_core.spec",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "music",
+    "streaming",
+    "electron",
+    "desktop"
+  ],
+  "author": "UB-WaveX",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "sql.js": "^1.8.0"
+  },
+  "build": {
+    "appId": "com.ubwavex.app",
+    "productName": "UB-WaveX",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/electron/**/*",
+      "src/ui/**/*",
+      "resources/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "src/python/dist/",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "executables/",
+        "to": "executables",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

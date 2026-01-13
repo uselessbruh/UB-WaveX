@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UB-WaveX</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="../public/wavexblack.png" class="logo-img theme-icon" data-icon="wavex" alt="UB-WaveX">
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-view="search">
+                    <img src="../public/searchBlack.png" class="icon theme-icon" data-icon="search" alt="Search">
+                    <span>Search</span>
+                </a>
+                <a href="#" class="nav-item" data-view="downloads">
+                    <img src="../public/downloadBlack.png" class="icon theme-icon" data-icon="download" alt="Downloads">
+                    <span>Downloads</span>
+                </a>
+                <a href="#" class="nav-item" data-view="liked">
+                    <img src="../public/liked.png" class="icon liked-icon" alt="Liked Songs">
+                    <span>Liked Songs</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" data-view="settings">
+                    <img src="../public/settingsBlack.png" class="icon theme-icon" data-icon="settings" alt="Settings">
+                    <span>Settings</span>
+                </a>
+            </div>
+
+            <div class="playlists-section">
+                <div class="section-header">
+                    <h3>Playlists</h3>
+                    <button class="btn-icon" id="btn-new-playlist" title="Create Playlist">
+                        <img src="../public/addBlack.png" class="theme-icon" data-icon="add" alt="Add Playlist">
+                    </button>
+                </div>
+                <div id="playlist-list" class="playlist-list">
+                    <!-- Playlists will be loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-body">
+                <!-- Search View -->
+                <div id="view-search" class="view active">
+                    <div class="search-bar">
+                        <input type="text" id="search-input" placeholder="Search for songs, artists, albums..." />
+                        <button id="btn-search" class="btn-primary">Search</button>
+                        <button id="btn-clear-search" class="btn-secondary" style="display: none;">Clear</button>
+                    </div>
+                    <div id="search-results" class="track-list">
+                    </div>
+                    <div id="search-history" class="search-history" style="display: none;">
+                        <h3>Recent Searches</h3>
+                        <div id="search-history-list" class="search-history-list"></div>
+                    </div>
+                    <div id="recent-plays" class="recent-plays" style="display: none;">
+                        <h3>Recent Plays</h3>
+                        <div id="recent-plays-list" class="recent-plays-list"></div>
+                    </div>
+                </div>
+
+                <!-- Downloads View -->
+                <div id="view-downloads" class="view">
+                    <div class="search-bar">
+                        <input type="text" id="downloads-search-input" placeholder="Search in downloads..." />
+                    </div>
+                    <h2>Downloaded Songs</h2>
+                    <div id="downloads-list" class="track-list">
+                        <div class="empty-state">
+                            <p>No downloads yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liked Songs View -->
+                <div id="view-liked" class="view">
+                    <div class="search-bar">
+                        <input type="text" id="liked-search-input" placeholder="Search in liked songs..." />
+                    </div>
+                    <h2>Liked Songs</h2>
+                    <div id="liked-list" class="track-list">
+                        <div class="empty-state">
+                            <p>No liked songs yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings View -->
+                <div id="view-settings" class="view">
+                    <div class="search-bar">
+                        <input type="text" id="settings-search-input" placeholder="Search settings..." />
+                    </div>
+                    <h2>Settings</h2>
+                    <div class="settings-container">
+                        <div class="settings-section">
+                            <h3>Appearance</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Theme</label>
+                                    <p class="setting-description">Choose between light and dark theme</p>
+                                </div>
+                                <div class="theme-toggle">
+                                    <button class="theme-btn" data-theme="dark">
+                                        <span class="icon">🌙</span>
+                                        <span>Dark</span>
+                                    </button>
+                                    <button class="theme-btn active" data-theme="light">
+                                        <span class="icon">☀️</span>
+                                        <span>Light</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Download</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Audio Quality</label>
+                                    <p class="setting-description">Choose download quality (higher quality = larger file size)</p>
+                                </div>
+                                <div class="quality-toggle">
+                                    <button class="quality-btn" data-quality="128">128 kbps</button>
+                                    <button class="quality-btn" data-quality="192">192 kbps</button>
+                                    <button class="quality-btn" data-quality="256">256 kbps</button>
+                                    <button class="quality-btn active" data-quality="320">320 kbps</button>
+                                    <button class="quality-btn" data-quality="flac">FLAC (Lossless)</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Streaming</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Streaming Quality</label>
+                                    <p class="setting-description">Choose playback quality for streaming (higher quality = more bandwidth)</p>
+                                </div>
+                                <div class="stream-quality-toggle">
+                                    <button class="stream-quality-btn" data-stream-quality="low">Low (Save Data)</button>
+                                    <button class="stream-quality-btn" data-stream-quality="medium">Medium</button>
+                                    <button class="stream-quality-btn active" data-stream-quality="high">High</button>
+                                    <button class="stream-quality-btn" data-stream-quality="best">Best Available</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>About</h3>
+                            <div class="about-content">
+                                <img src="../public/wavexblack.png" alt="WaveX Logo" class="about-logo" id="about-logo">
+                                <div class="about-info">
+                                    <h4>UB-WaveX</h4>
+                                    <p class="version">Version 1.0.0</p>
+                                    <p class="description">A powerful music streaming and download desktop application</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playlist View -->
+                <div id="view-playlist" class="view">
+                    <div class="search-bar">
+                        <input type="text" id="playlist-search-input" placeholder="Search in playlist..." />
+                    </div>
+                    <div class="playlist-header">
+                        <h2 id="playlist-title">Playlist</h2>
+                        <div class="playlist-actions">
+                            <button class="btn-secondary" id="btn-download-playlist">Download All</button>
+                            <button class="btn-secondary" id="btn-rename-playlist">Rename</button>
+                            <button class="btn-danger" id="btn-delete-playlist">Delete</button>
+                        </div>
+                    </div>
+                    <div id="playlist-tracks" class="track-list">
+                        <div class="empty-state">
+                            <p>No tracks in this playlist</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Player Bar -->
+    <div class="player-bar">
+        <input type="range" id="seek-bar" class="seek-bar" min="0" max="100" value="0" />
+        <div class="player-time-container">
+            <span id="current-time" class="time-display">0:00</span>
+            <span id="total-time" class="time-display">0:00</span>
+        </div>
+        <div class="player-content">
+            <div class="player-track-info">
+                <div class="player-details">
+                    <div class="player-title-wrapper">
+                        <div id="player-title" class="player-title">No track playing</div>
+                    </div>
+                    <div id="player-artist" class="player-artist">Unknown Artist</div>
+                </div>
+            </div>
+
+            <div class="player-center">
+                <div class="player-controls">
+                    <button id="btn-previous" class="btn-player" title="Previous">
+                        <img src="../public/previousBlack.png" class="theme-icon" data-icon="previous" alt="Previous">
+                    </button>
+                    <button id="btn-backward-10" class="btn-player btn-skip" title="Backward 5s">
+                        <img src="../public/back5Black.png" class="theme-icon" data-icon="back5" alt="Back 5s">
+                    </button>
+                    <button id="btn-play-pause" class="btn-player btn-play-pause" title="Play">
+                        <img src="../public/playBlack.png" class="theme-icon play-pause-icon" data-icon="play" alt="Play">
+                    </button>
+                    <button id="btn-forward-10" class="btn-player btn-skip" title="Forward 5s">
+                        <img src="../public/skip5Black.png" class="theme-icon" data-icon="skip5" alt="Skip 5s">
+                    </button>
+                    <button id="btn-next" class="btn-player" title="Next">
+                        <img src="../public/nextBlack.png" class="theme-icon" data-icon="next" alt="Next">
+                    </button>
+                </div>
+            </div>
+
+            <div class="player-volume">
+                <button id="btn-volume" class="btn-player" title="Mute/Unmute">
+                    <img src="../public/vol3Black.png" class="theme-icon volume-icon" data-icon="vol3" alt="Volume">
+                </button>
+            <input type="range" id="volume-bar" class="volume-bar" min="0" max="100" value="100" />
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message">Initializing...</p>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu">
+        <div class="context-menu-item" data-action="play">Play</div>
+        <div class="context-menu-item" data-action="play-next">Play Next</div>
+        <div class="context-menu-item" data-action="add-to-queue">Add to Queue</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="download">Download</div>
+        <div class="context-menu-item" data-action="like">Like</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="add-to-playlist">Add to Playlist</div>
+    </div>
+
+    <audio id="audio-player" preload="auto"></audio>
+
+    <script src="renderer.js"></script>
+    <script src="player.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+src/python/dist/
+src/python/build/
+*.pyc
+__pycache__/
+*.log
+.DS_Store
+Thumbs.db
+*.exe
+*.spec.bak
