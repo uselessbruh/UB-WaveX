@@ -21,7 +21,7 @@ function loadTheme() {
 function toggleTheme() {
     const currentTheme = root.hasAttribute('data-theme') ? 'light' : 'dark';
     const themeText = document.getElementById('theme-text');
-    
+
     if (currentTheme === 'dark') {
         root.setAttribute('data-theme', 'light');
         if (themeText) themeText.textContent = 'Dark';
@@ -43,17 +43,17 @@ function updateLogo() {
     const navLogo = document.getElementById('nav-logo');
     const favicon = document.getElementById('favicon');
     const theme = root.hasAttribute('data-theme') ? 'light' : 'dark';
-    
+
     if (heroLogo) {
         // Hero uses full WaveX logo: Dark theme = white, Light theme = black
         heroLogo.src = theme === 'light' ? 'wavexblack.png' : 'wavexwhite.png';
     }
-    
+
     if (navLogo) {
         // Navbar uses icon only: Dark theme = white, Light theme = black
         navLogo.src = theme === 'light' ? 'iconBlack.png' : 'iconWhite.png';
     }
-    
+
     if (favicon) {
         // Dark theme: white icon, Light theme: black icon
         favicon.href = theme === 'light' ? 'iconBlack.png' : 'iconWhite.png';
@@ -80,7 +80,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
 // Add download click tracking (optional)
 document.querySelectorAll('.download-card').forEach(card => {
-    card.addEventListener('click', function(e) {
+    card.addEventListener('click', function (e) {
         const platform = this.querySelector('h3').textContent;
         console.log(`Download started for: ${platform}`);
         // Add analytics tracking here if needed
@@ -93,16 +93,16 @@ let ticking = false;
 function updateParallax() {
     const scrolled = window.pageYOffset;
     const header = document.querySelector('.header');
-    
+
     if (header) {
         header.style.transform = `translateY(${scrolled * 0.3}px)`;
         header.style.opacity = 1 - (scrolled / 500);
     }
-    
+
     ticking = false;
 }
 
-window.addEventListener('scroll', function() {
+window.addEventListener('scroll', function () {
     if (!ticking) {
         window.requestAnimationFrame(updateParallax);
         ticking = true;

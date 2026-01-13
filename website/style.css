@@ -343,12 +343,17 @@ body {
 }
 
 @keyframes tabCycle1 {
-    0%, 12.5%, 100% {
+
+    0%,
+    12.5%,
+    100% {
         background-color: var(--button-bg);
         opacity: 1;
         transform: scale(1.05);
     }
-    25%, 87.5% {
+
+    25%,
+    87.5% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
@@ -356,17 +361,23 @@ body {
 }
 
 @keyframes tabCycle2 {
-    0%, 87.5% {
+
+    0%,
+    87.5% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
     }
-    12.5%, 25% {
+
+    12.5%,
+    25% {
         background-color: var(--button-bg);
         opacity: 1;
         transform: scale(1.05);
     }
-    37.5%, 100% {
+
+    37.5%,
+    100% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
@@ -374,17 +385,23 @@ body {
 }
 
 @keyframes tabCycle3 {
-    0%, 75% {
+
+    0%,
+    75% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
     }
-    25%, 37.5% {
+
+    25%,
+    37.5% {
         background-color: var(--button-bg);
         opacity: 1;
         transform: scale(1.05);
     }
-    50%, 100% {
+
+    50%,
+    100% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
@@ -392,17 +409,23 @@ body {
 }
 
 @keyframes tabCycle4 {
-    0%, 62.5% {
+
+    0%,
+    62.5% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
     }
-    37.5%, 50% {
+
+    37.5%,
+    50% {
         background-color: var(--button-bg);
         opacity: 1;
         transform: scale(1.05);
     }
-    62.5%, 100% {
+
+    62.5%,
+    100% {
         background-color: var(--border-color);
         opacity: 0.5;
         transform: scale(1);
@@ -439,18 +462,23 @@ body {
 }
 
 @keyframes waveAnimation {
-    0%, 100% {
+
+    0%,
+    100% {
         height: 20px;
         opacity: 0.6;
     }
+
     25% {
         height: 50px;
         opacity: 1;
     }
+
     50% {
         height: 30px;
         opacity: 0.8;
     }
+
     75% {
         height: 60px;
         opacity: 1;
@@ -869,6 +897,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -881,84 +910,84 @@ body {
     .nav-container {
         padding: 0 20px;
     }
-    
+
     .nav-links {
         gap: 20px;
     }
-    
+
     .nav-link {
         display: none;
     }
-    
+
     .nav-btn {
         padding: 8px 20px;
         font-size: 13px;
     }
-    
+
     .hero-container {
         flex-direction: column;
         gap: 40px;
         padding: 40px 20px;
     }
-    
+
     .hero-content {
         max-width: 100%;
     }
-    
+
     .hero-title {
         font-size: 36px;
     }
-    
+
     .hero-description {
         font-size: 15px;
     }
-    
+
     .hero-logo {
         height: 100px;
     }
-    
+
     .hero-visual {
         width: 100%;
     }
-    
+
     .app-mockup {
         max-width: 100%;
     }
-    
+
     .mockup-content {
         min-height: 300px;
     }
-    
+
     .mockup-sidebar {
         width: 120px;
         padding: 16px 12px;
     }
-    
+
     .btn-primary,
     .btn-secondary {
         width: 100%;
         justify-content: center;
     }
-    
+
     .feature-badges {
         width: 100%;
     }
-    
+
     .badge {
         flex: 1;
         justify-content: center;
         min-width: 0;
         font-size: 12px;
     }
-    
+
     .section-title h2 {
         font-size: 32px;
     }
-    
+
     .features-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .download-grid {
         grid-template-columns: 1fr;
     }
@@ -968,21 +997,21 @@ body {
     .nav-logo-img {
         height: 40px;
     }
-    
+
     .hero-title {
         font-size: 32px;
     }
-    
+
     .feature-badges {
         flex-direction: column;
     }
-    
+
     .badge {
         width: 100%;
     }
 }
 
-.container > * {
+.container>* {
     animation: fadeIn 0.6s ease-out forwards;
 }
 
