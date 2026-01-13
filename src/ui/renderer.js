@@ -6,6 +6,11 @@ let currentView = 'search';
 let currentPlaylistId = null;
 let backendReady = false;
 
+// Get current theme
+function getCurrentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+
 // DOM Elements
 const searchInput = document.getElementById('search-input');
 const btnSearch = document.getElementById('btn-search');
@@ -50,6 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     loadSearchHistory();
     loadRecentPlays();
+    
+    // Set correct icon for initially active tab based on theme
+    const activeNavItem = document.querySelector('.nav-item.active');
+    if (activeNavItem) {
+        const activeIcon = activeNavItem.querySelector('.icon.theme-icon');
+        if (activeIcon) {
+            const theme = getCurrentTheme();
+            const iconType = activeIcon.dataset.icon;
+            // Dark theme: white bg, use black icon
+            // Light theme: black bg, use white icon
+            const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
+            activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
+        }
+    }
 });
 
 // Save playback state before window closes
@@ -219,9 +238,30 @@ function setupNavigation() {
             if (view) {
                 switchView(view);
 
-                // Update active state
-                navItems.forEach(n => n.classList.remove('active'));
+                // Update active state and icons
+                const theme = getCurrentTheme();
+                navItems.forEach(n => {
+                    n.classList.remove('active');
+                    const icon = n.querySelector('.icon.theme-icon');
+                    if (icon) {
+                        const iconType = icon.dataset.icon;
+                        // Inactive icons: Black for light theme, White for dark theme
+                        const suffix = theme === 'light' ? 'Black' : 'White';
+                        icon.src = `../public/${iconType}${suffix}.png`;
+                    }
+                });
+                
                 item.classList.add('active');
+                
+                // Set active icon based on theme
+                // Dark theme: white bg, use black icon
+                // Light theme: black bg, use white icon
+                const activeIcon = item.querySelector('.icon.theme-icon');
+                if (activeIcon) {
+                    const iconType = activeIcon.dataset.icon;
+                    const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
+                    activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
+                }
 
                 // Clear playlist selection
                 document.querySelectorAll('.playlist-item').forEach(p =>
@@ -535,10 +575,14 @@ function createTrackElement(track, options = {}) {
     const btnMenu = document.createElement('button');
     btnMenu.className = 'btn-track-action menu-btn';
     btnMenu.title = 'More options';
-    btnMenu.innerHTML = '⋮'; // Vertical ellipsis character
-    btnMenu.style.fontSize = '20px';
-    btnMenu.style.fontWeight = 'bold';
-    btnMenu.style.color = 'var(--text-secondary)';
+    
+    const menuIcon = document.createElement('img');
+    const theme = getCurrentTheme();
+    menuIcon.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+    menuIcon.style.width = '20px';
+    menuIcon.style.height = '20px';
+    menuIcon.style.display = 'block';
+    btnMenu.appendChild(menuIcon);
 
     btnMenu.onclick = (e) => {
         e.stopPropagation();
@@ -655,7 +699,22 @@ async function loadPlaylists() {
         const result = await ipcRenderer.invoke('db-get-playlists');
 
         if (result.success) {
-            displayPlaylists(result.data);
+            // Check download status for each playlist
+            const playlistsWithStatus = await Promise.all(result.data.map(async (playlist) => {
+                const tracksResult = await ipcRenderer.invoke('db-get-playlist-tracks', playlist.id);
+                if (tracksResult.success && tracksResult.data.length > 0) {
+                    // Check if all tracks are downloaded
+                    const allDownloaded = tracksResult.data.every(track => track.downloaded);
+                    playlist.allDownloaded = allDownloaded;
+                    playlist.trackCount = tracksResult.data.length;
+                } else {
+                    playlist.allDownloaded = false;
+                    playlist.trackCount = 0;
+                }
+                return playlist;
+            }));
+            
+            displayPlaylists(playlistsWithStatus);
         }
     } catch (error) {
         console.error('Failed to load playlists:', error);
@@ -673,26 +732,62 @@ function displayPlaylists(playlists) {
         nameSpan.className = 'playlist-name';
         nameSpan.textContent = playlist.name;
 
+        const iconsContainer = document.createElement('div');
+        iconsContainer.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+        // Show downloaded icon if all tracks are downloaded
+        if (playlist.allDownloaded && playlist.trackCount > 0) {
+            const downloadedIcon = document.createElement('img');
+            downloadedIcon.src = '../public/downloaded.png';
+            downloadedIcon.className = 'playlist-downloaded-icon';
+            downloadedIcon.style.cssText = 'width: 16px; height: 16px; opacity: 0.7;';
+            downloadedIcon.title = 'All tracks downloaded';
+            iconsContainer.appendChild(downloadedIcon);
+        }
+
         const menuBtn = document.createElement('button');
         menuBtn.className = 'playlist-menu-btn';
         menuBtn.title = 'Playlist options';
-        menuBtn.innerHTML = '⋮'; // Vertical ellipsis character
-        menuBtn.style.fontSize = '18px';
-        menuBtn.style.fontWeight = 'bold';
+        
+        const menuIcon = document.createElement('img');
+        const theme = getCurrentTheme();
+        menuIcon.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+        menuIcon.style.width = '18px';
+        menuIcon.style.height = '18px';
+        menuIcon.style.display = 'block';
+        menuBtn.appendChild(menuIcon);
 
         menuBtn.onclick = (e) => {
             e.stopPropagation();
             showPlaylistContextMenu(e, playlist);
         };
+        
+        iconsContainer.appendChild(menuBtn);
 
         div.appendChild(nameSpan);
-        div.appendChild(menuBtn);
+        div.appendChild(iconsContainer);
 
         div.onclick = () => {
-            document.querySelectorAll('.playlist-item').forEach(p =>
-                p.classList.remove('active')
-            );
+            const theme = getCurrentTheme();
+            
+            // Update all playlist items and their icons
+            document.querySelectorAll('.playlist-item').forEach(p => {
+                p.classList.remove('active');
+                const btn = p.querySelector('.playlist-menu-btn img');
+                if (btn) {
+                    // Inactive playlist: Black for light theme, White for dark theme
+                    btn.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+                }
+            });
+            
             div.classList.add('active');
+            
+            // Active playlist: White for light theme (black bg), Black for dark theme (white bg)
+            const activeMenuIcon = div.querySelector('.playlist-menu-btn img');
+            if (activeMenuIcon) {
+                activeMenuIcon.src = theme === 'light' ? '../public/3dotWhite.png' : '../public/3dotBlack.png';
+            }
+            
             switchToPlaylistView(playlist.id, playlist.name);
         };
 
@@ -709,30 +804,30 @@ function displayPlaylists(playlists) {
 async function createNewPlaylist() {
     // Create custom dialog since prompt() is not supported in Electron
     const dialog = document.createElement('div');
-    dialog.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+    dialog.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;';
 
     const form = document.createElement('div');
-    form.style.cssText = 'background: #181818; padding: 20px; border-radius: 8px; min-width: 300px;';
+    form.style.cssText = 'background: var(--bg-secondary); padding: 20px; border-radius: 8px; min-width: 300px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);';
 
     const title = document.createElement('h3');
     title.textContent = 'New Playlist';
-    title.style.cssText = 'margin: 0 0 15px 0; color: #fff;';
+    title.style.cssText = 'margin: 0 0 15px 0; color: var(--text-primary);';
 
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Enter playlist name';
-    input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 15px; background: #282828; border: 1px solid #404040; color: #fff; border-radius: 4px; font-size: 14px;';
+    input.className = 'dialog-input';
 
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = 'padding: 8px 16px; background: #282828; color: #fff; border: none; border-radius: 4px; cursor: pointer;';
+    cancelBtn.className = 'btn-secondary';
 
     const createBtn = document.createElement('button');
     createBtn.textContent = 'Create';
-    createBtn.style.cssText = 'padding: 8px 16px; background: #1db954; color: #fff; border: none; border-radius: 4px; cursor: pointer;';
+    createBtn.className = 'btn-primary';
 
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(createBtn);
@@ -792,8 +887,12 @@ async function loadPlaylistTracks(playlistId) {
         const result = await ipcRenderer.invoke('db-get-playlist-tracks', playlistId);
 
         if (result.success) {
+            // Enrich tracks with liked/downloaded status
+            const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+            const enrichedTracks = enrichResult.success ? enrichResult.data : result.data;
+            
             const container = document.getElementById('playlist-tracks');
-            displayTracks(container, result.data);
+            displayTracks(container, enrichedTracks);
         }
     } catch (error) {
         console.error('Failed to load playlist tracks:', error);
@@ -832,28 +931,26 @@ async function deleteDownload(track) {
         return;
     }
 
-    if (!confirm(`Delete "${track.title}" from downloads?`)) {
-        return;
-    }
+    showConfirm(`Delete "${track.title}" from downloads?`, async () => {
+        try {
+            const result = await ipcRenderer.invoke('delete-download', track.youtube_id);
 
-    try {
-        const result = await ipcRenderer.invoke('delete-download', track.youtube_id);
+            if (result.success) {
+                showSuccess(`Deleted: ${track.title}`);
+                track.downloaded = false;
 
-        if (result.success) {
-            showSuccess(`Deleted: ${track.title}`);
-            track.downloaded = false;
+                // Update UI to show download button instead of downloaded indicator
+                updateTrackDownloadStatus(track, false);
 
-            // Update UI to show download button instead of downloaded indicator
-            updateTrackDownloadStatus(track, false);
-
-            // Refresh downloads list
-            loadDownloads();
-        } else {
-            showError(`Delete failed: ${result.error}`);
+                // Refresh downloads list
+                loadDownloads();
+            } else {
+                showError(`Delete failed: ${result.error}`);
+            }
+        } catch (error) {
+            showError(`Delete error: ${error.message}`);
         }
-    } catch (error) {
-        showError(`Delete error: ${error.message}`);
-    }
+    });
 }
 
 // Context Menu
@@ -870,15 +967,42 @@ function showContextMenu(event, track) {
     window.lastContextMenuX = event.pageX;
     window.lastContextMenuY = event.pageY;
 
-    // Save original content if not already saved
+    // Generate dynamic context menu based on track state
+    const menuItems = [];
+    
+    // Playback options
+    menuItems.push('<div class="context-menu-item" data-action="play">Play</div>');
+    menuItems.push('<div class="context-menu-item" data-action="play-next">Play Next</div>');
+    menuItems.push('<div class="context-menu-item" data-action="add-to-queue">Add to Queue</div>');
+    menuItems.push('<div class="context-menu-divider"></div>');
+    
+    // Download option - changes based on downloaded state
+    if (track.downloaded) {
+        menuItems.push('<div class="context-menu-item" data-action="remove-download">Remove Download</div>');
+    } else {
+        menuItems.push('<div class="context-menu-item" data-action="download">Download</div>');
+    }
+    
+    // Like option - changes based on liked state
+    if (track.liked) {
+        menuItems.push('<div class="context-menu-item" data-action="unlike">Unlike</div>');
+    } else {
+        menuItems.push('<div class="context-menu-item" data-action="like">Like</div>');
+    }
+    
+    menuItems.push('<div class="context-menu-divider"></div>');
+    
+    // Playlist options
+    if (currentView === 'playlist' && currentPlaylistId) {
+        menuItems.push('<div class="context-menu-item" data-action="remove-from-playlist">Remove from Playlist</div>');
+    }
+    menuItems.push('<div class="context-menu-item" data-action="add-to-playlist">Add to Playlist</div>');
+    
+    contextMenu.innerHTML = menuItems.join('');
+    
+    // Save as original content for restoration
     if (!originalContextMenuContent) {
         originalContextMenuContent = contextMenu.innerHTML;
-    }
-
-    // Ensure track menu content is shown
-    if (contextMenu.dataset.menuType === 'playlist') {
-        contextMenu.innerHTML = originalContextMenuContent;
-        delete contextMenu.dataset.menuType;
     }
 
     // First show menu to calculate its dimensions
@@ -930,11 +1054,18 @@ function handleContextMenuAction(action) {
         case 'download':
             downloadTrack(contextMenuTrack);
             break;
+        case 'remove-download':
+            deleteDownload(contextMenuTrack);
+            break;
         case 'like':
+        case 'unlike':
             toggleLike(contextMenuTrack);
             break;
         case 'add-to-playlist':
             showAddToPlaylistDialog(contextMenuTrack);
+            break;
+        case 'remove-from-playlist':
+            removeFromCurrentPlaylist(contextMenuTrack);
             break;
     }
 
@@ -1034,10 +1165,10 @@ async function handlePlaylistContextMenuAction(action) {
 
 async function renamePlaylist(playlist) {
     const dialog = document.createElement('div');
-    dialog.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+    dialog.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;';
 
     const form = document.createElement('div');
-    form.style.cssText = 'background: var(--bg-secondary); padding: 20px; border-radius: 8px; min-width: 300px;';
+    form.style.cssText = 'background: var(--bg-secondary); padding: 20px; border-radius: 8px; min-width: 300px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);';
 
     const title = document.createElement('h3');
     title.textContent = 'Rename Playlist';
@@ -1047,7 +1178,7 @@ async function renamePlaylist(playlist) {
     input.type = 'text';
     input.value = playlist.name;
     input.placeholder = 'Enter new playlist name';
-    input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 15px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; font-size: 14px;';
+    input.className = 'dialog-input';
 
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
@@ -1073,13 +1204,13 @@ async function renamePlaylist(playlist) {
     saveBtn.onclick = async () => {
         const newName = input.value.trim();
         if (newName) {
-            const result = await ipcRenderer.invoke('db-update-playlist', playlist.id, { name: newName });
+            const result = await ipcRenderer.invoke('db-rename-playlist', { playlistId: playlist.id, name: newName });
             if (result.success) {
                 document.body.removeChild(dialog);
                 loadPlaylists();
-                showSuccess('Playlist renamed');
+                showToast('Playlist renamed', 'success');
             } else {
-                showError(`Failed to rename playlist: ${result.error}`);
+                showToast(`Failed to rename playlist: ${result.error}`, 'error');
             }
         }
     };
@@ -1094,7 +1225,7 @@ async function renamePlaylist(playlist) {
 }
 
 async function deletePlaylist(playlist) {
-    if (confirm(`Are you sure you want to delete the playlist "${playlist.name}"?`)) {
+    showConfirm(`Are you sure you want to delete the playlist "${playlist.name}"?`, async () => {
         const result = await ipcRenderer.invoke('db-delete-playlist', playlist.id);
         if (result.success) {
             loadPlaylists();
@@ -1106,6 +1237,37 @@ async function deletePlaylist(playlist) {
         } else {
             showError(`Failed to delete playlist: ${result.error}`);
         }
+    });
+}
+
+// Remove Track from Current Playlist
+async function removeFromCurrentPlaylist(track) {
+    if (!currentPlaylistId) {
+        showError('Not viewing a playlist');
+        return;
+    }
+    
+    try {
+        const trackId = track.id;
+        if (!trackId) {
+            showError('Track ID not found');
+            return;
+        }
+        
+        const result = await ipcRenderer.invoke('db-remove-from-playlist', { 
+            playlistId: currentPlaylistId, 
+            trackId: trackId 
+        });
+        
+        if (result.success) {
+            showSuccess('Removed from playlist');
+            // Reload the playlist to update the view
+            loadPlaylistTracks(currentPlaylistId);
+        } else {
+            showError(`Failed to remove track: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error removing track: ${error.message}`);
     }
 }
 
@@ -1120,81 +1282,87 @@ async function showAddToPlaylistDialog(track) {
 
     const playlists = result.data;
 
-    // Build playlist menu HTML
-    let playlistMenuHtml = '';
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'playlist-selection-overlay';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+
+    // Create dialog container
+    const dialog = document.createElement('div');
+    dialog.className = 'playlist-selection-dialog';
+    dialog.style.cssText = 'background: var(--bg-secondary); border-radius: 8px; padding: 24px; min-width: 320px; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);';
+
+    // Title
+    const title = document.createElement('h3');
+    title.textContent = 'Add to Playlist';
+    title.style.cssText = 'margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px; font-weight: 600;';
+
+    // Track name
+    const trackName = document.createElement('p');
+    trackName.textContent = track.title;
+    trackName.style.cssText = 'margin: 0 0 20px 0; color: var(--text-secondary); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+
+    // Playlist list container
+    const playlistList = document.createElement('div');
+    playlistList.className = 'playlist-selection-list';
+    playlistList.style.cssText = 'max-height: 300px; overflow-y: auto;';
+
     playlists.forEach(playlist => {
-        playlistMenuHtml += `<div class="context-menu-item" data-playlist-id="${playlist.id}">${playlist.name}</div>`;
+        const item = document.createElement('div');
+        item.className = 'playlist-selection-item';
+        item.textContent = playlist.name;
+        item.style.cssText = 'padding: 12px 16px; margin-bottom: 8px; background: var(--bg-tertiary); border-radius: 6px; cursor: pointer; transition: all 0.2s; color: var(--text-primary); font-size: 14px;';
+        
+        item.addEventListener('mouseenter', () => {
+            item.style.backgroundColor = 'var(--bg-hover)';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            item.style.backgroundColor = 'var(--bg-tertiary)';
+        });
+        
+        item.addEventListener('click', async () => {
+            await addTrackToPlaylist(track, playlist.id, playlist.name);
+            document.body.removeChild(overlay);
+        });
+        
+        playlistList.appendChild(item);
     });
 
-    // Save current menu state
-    const wasPlaylistMenu = currentMenuType === 'playlist';
-    const previousContent = contextMenu.innerHTML;
+    // Assemble dialog
+    dialog.appendChild(title);
+    dialog.appendChild(trackName);
+    dialog.appendChild(playlistList);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
 
-    // Set playlist selection menu
-    contextMenu.innerHTML = playlistMenuHtml;
-    contextMenu.dataset.menuType = 'playlist-selection';
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    });
 
-    // Position near the mouse
-    const rect = contextMenu.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = Math.min(window.lastContextMenuX || window.innerWidth / 2, viewportWidth - 220);
-    let top = Math.min(window.lastContextMenuY || window.innerHeight / 2, viewportHeight - (playlists.length * 40 + 20));
-
-    left = Math.max(10, left);
-    top = Math.max(10, top);
-
-    contextMenu.style.left = left + 'px';
-    contextMenu.style.top = top + 'px';
-    contextMenu.classList.add('visible');
-
-    // Handle playlist selection
-    const handlePlaylistClick = async (e) => {
-        const playlistId = e.target.dataset.playlistId;
-        if (playlistId) {
-            await addTrackToPlaylist(track, parseInt(playlistId));
-            contextMenu.classList.remove('visible');
-
-            // Restore previous menu content
-            setTimeout(() => {
-                contextMenu.innerHTML = wasPlaylistMenu ? playlistContextMenuHtml : (originalContextMenuContent || previousContent);
-                delete contextMenu.dataset.menuType;
-                contextMenu.removeEventListener('click', handlePlaylistClick);
-            }, 200);
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', escapeHandler);
         }
     };
-
-    contextMenu.addEventListener('click', handlePlaylistClick);
-
-    // Close on outside click
-    const closeHandler = (e) => {
-        if (!contextMenu.contains(e.target)) {
-            contextMenu.classList.remove('visible');
-            setTimeout(() => {
-                contextMenu.innerHTML = wasPlaylistMenu ? playlistContextMenuHtml : (originalContextMenuContent || previousContent);
-                delete contextMenu.dataset.menuType;
-                contextMenu.removeEventListener('click', handlePlaylistClick);
-            }, 200);
-            document.removeEventListener('click', closeHandler);
-        }
-    };
-
-    setTimeout(() => {
-        document.addEventListener('click', closeHandler);
-    }, 100);
+    document.addEventListener('keydown', escapeHandler);
 }
 
-async function addTrackToPlaylist(track, playlistId) {
+async function addTrackToPlaylist(track, playlistId, playlistName) {
     try {
         // First, ensure the track exists in the database
         const trackId = track.id || await getOrCreateTrackId(track);
 
-        // Add track to playlist
-        const result = await ipcRenderer.invoke('db-add-track-to-playlist', playlistId, trackId);
+        // Add track to playlist using correct IPC handler
+        const result = await ipcRenderer.invoke('db-add-to-playlist', { playlistId, trackId });
 
         if (result.success) {
-            showSuccess('Track added to playlist');
+            showSuccess(`Added to ${playlistName || 'playlist'}`);
 
             // If we're currently viewing this playlist, reload it
             if (currentView === 'playlist' && currentPlaylistId === playlistId) {
@@ -1263,23 +1431,103 @@ function hideLoading() {
 }
 
 function showError(message) {
-    alert(message); // TODO: Better error display
+    showToast(message, 'error');
     console.error(message);
 }
 
 function showSuccess(message) {
-    // TODO: Toast notification
+    showToast(message, 'success');
     console.log(message);
 }
 
 function showInfo(message) {
-    // TODO: Toast notification
+    showToast(message, 'info');
     console.log('INFO:', message);
 }
 
 function showWarning(message) {
-    // TODO: Toast notification
+    showToast(message, 'warning');
     console.warn('WARNING:', message);
+}
+
+// Toast Notification System
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+        border-left: 4px solid ${type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : type === 'warning' ? '#f59e0b' : 'var(--accent-primary)'};
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
+
+// Custom Confirmation Dialog
+function showConfirm(message, onConfirm, onCancel) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background: var(--bg-secondary); padding: 24px; border-radius: 8px; min-width: 320px; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);';
+    
+    const messageEl = document.createElement('p');
+    messageEl.textContent = message;
+    messageEl.style.cssText = 'margin: 0 0 20px 0; color: var(--text-primary); font-size: 14px; line-height: 1.5;';
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'btn-secondary';
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.className = 'btn-primary';
+    
+    cancelBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onCancel) onCancel();
+    };
+    
+    confirmBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onConfirm) onConfirm();
+    };
+    
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(confirmBtn);
+    dialog.appendChild(messageEl);
+    dialog.appendChild(buttonContainer);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+            if (onCancel) onCancel();
+        }
+    });
+    
+    // Focus confirm button
+    confirmBtn.focus();
 }
 
 async function checkDownloadQueue() {
@@ -1354,7 +1602,30 @@ function updateAllIcons() {
     document.querySelectorAll('.theme-icon').forEach(icon => {
         const iconName = icon.dataset.icon;
         if (iconName) {
-            icon.src = getIconPath(iconName, theme);
+            // Check if this icon belongs to an active nav item
+            const parentNavItem = icon.closest('.nav-item');
+            if (parentNavItem && parentNavItem.classList.contains('active')) {
+                // Active items: Black icon for dark theme (white bg), White icon for light theme (black bg)
+                const suffix = theme === 'light' ? 'White' : 'Black';
+                icon.src = `../public/${iconName}${suffix}.png`;
+            } else {
+                // Inactive items: use regular theme icons
+                icon.src = getIconPath(iconName, theme);
+            }
+        }
+    });
+
+    // Update playlist 3-dot icons
+    document.querySelectorAll('.playlist-item').forEach(item => {
+        const menuIcon = item.querySelector('.playlist-menu-btn img');
+        if (menuIcon) {
+            if (item.classList.contains('active')) {
+                // Active playlist: White for light theme, Black for dark theme
+                menuIcon.src = theme === 'light' ? '../public/3dotWhite.png' : '../public/3dotBlack.png';
+            } else {
+                // Inactive playlist: Black for light theme, White for dark theme
+                menuIcon.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+            }
         }
     });
 

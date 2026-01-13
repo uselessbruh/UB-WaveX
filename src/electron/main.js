@@ -43,6 +43,7 @@ function createWindow() {
     frame: true,
     backgroundColor: '#1a1a1a',
     icon: getAppIcon(),
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
