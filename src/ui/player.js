@@ -17,7 +17,7 @@ class AudioPlayer {
         this.maxPreloadTracks = 5;
         this.maxPreloadDuration = 1800; // 30 minutes in seconds
         this.isPlaying = false;
-        
+
         // Playback context tracking
         this.playbackContext = {
             type: null, // 'online', 'playlist', 'liked', 'downloads'
@@ -26,7 +26,7 @@ class AudioPlayer {
             tracks: [], // Full list of tracks in current context
             shuffle: false // Shuffle state
         };
-        
+
         // Shuffle state
         this.shuffledIndices = [];
         this.originalQueue = [];
@@ -202,16 +202,16 @@ class AudioPlayer {
         // Create shuffled indices array
         this.originalQueue = [...tracks];
         const currentTrack = tracks[currentIndex];
-        
+
         // Create array of all indices except current
         const indices = tracks.map((_, i) => i).filter(i => i !== currentIndex);
-        
+
         // Fisher-Yates shuffle
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [indices[i], indices[j]] = [indices[j], indices[i]];
         }
-        
+
         // Put current track first, then shuffled tracks
         this.shuffledIndices = [currentIndex, ...indices];
         this.queue = this.shuffledIndices.map(i => tracks[i]);
@@ -225,7 +225,7 @@ class AudioPlayer {
             const currentIndex = this.originalQueue.findIndex(
                 t => t.youtube_id === this.currentTrack.youtube_id
             );
-            
+
             this.queue = [...this.originalQueue];
             this.queueIndex = currentIndex >= 0 ? currentIndex : 0;
             this.playbackContext.shuffle = false;
@@ -354,10 +354,10 @@ class AudioPlayer {
         // Keep only the most recent tracks within limits
         if (this.preloadCache.size > this.maxPreloadTracks) {
             const entries = Array.from(this.preloadCache.entries());
-            
+
             // Calculate total duration
             let totalDuration = entries.reduce((sum, [, data]) => sum + (data.duration || 0), 0);
-            
+
             // Sort by timestamp (oldest first)
             entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
 
@@ -399,7 +399,7 @@ class AudioPlayer {
     updatePlaybackSourceUI() {
         // Update UI to show where music is playing from
         const sourceElement = document.getElementById('playback-source');
-        
+
         if (!sourceElement) {
             // Create source element if it doesn't exist
             const wrapper = document.querySelector('.player-title-wrapper');
@@ -410,22 +410,22 @@ class AudioPlayer {
                 wrapper.appendChild(source);
             }
         }
-        
+
         const source = document.getElementById('playback-source');
         if (source) {
             if (this.playbackContext.type && this.playbackContext.type !== 'online') {
                 let displayText = '';
-                
+
                 if (this.playbackContext.name) {
                     displayText = this.playbackContext.name;
                 } else {
                     displayText = this.getContextDisplayName(this.playbackContext.type);
                 }
-                
+
                 if (this.playbackContext.shuffle) {
                     displayText += ' • Shuffle';
                 }
-                
+
                 source.textContent = displayText;
                 source.style.display = 'block';
             } else {
@@ -482,7 +482,7 @@ class AudioPlayer {
         if (playNext && this.queueIndex >= 0) {
             // Insert after current track
             this.queue.splice(this.queueIndex + 1, 0, track);
-            
+
             // If in shuffle mode, also update originalQueue
             if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
                 this.originalQueue.splice(this.queueIndex + 1, 0, track);
@@ -490,13 +490,13 @@ class AudioPlayer {
         } else {
             // Add to end of queue
             this.queue.push(track);
-            
+
             // If in shuffle mode, also update originalQueue
             if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
                 this.originalQueue.push(track);
             }
         }
-        
+
         // Update context tracks if adding to an active context
         if (this.playbackContext.tracks.length > 0) {
             if (playNext) {
