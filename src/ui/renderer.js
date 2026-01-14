@@ -290,7 +290,7 @@ function setupNavigation() {
 function updateNavigationState(view) {
     const theme = getCurrentTheme();
     const navItems = document.querySelectorAll('.nav-item');
-    
+
     // Update all nav items
     navItems.forEach(n => {
         n.classList.remove('active');
@@ -307,7 +307,7 @@ function updateNavigationState(view) {
     const targetNavItem = document.querySelector(`[data-view="${view}"]`);
     if (targetNavItem) {
         targetNavItem.classList.add('active');
-        
+
         // Set active icon based on theme
         const activeIcon = targetNavItem.querySelector('.icon.theme-icon');
         if (activeIcon) {
@@ -527,13 +527,13 @@ async function displaySearchResults(tracks) {
         // YouTube video IDs are 11 characters, channel IDs start with UC and are longer
         const videoId = track.youtube_id || track.video_id;
         if (!videoId) return false;
-        
+
         // Exclude channel IDs (start with UC, UU, or PL for playlists)
         if (videoId.startsWith('UC') || videoId.startsWith('UU') || videoId.startsWith('PL')) {
             console.log('Filtered out invalid ID:', videoId, track.title);
             return false;
         }
-        
+
         return videoId.length === 11;
     });
 
@@ -869,13 +869,13 @@ async function toggleLike(track) {
         } else {
             trackId = await getOrCreateTrackId(track);
         }
-        
+
         if (!trackId) {
             console.error('Failed to get track ID, cannot toggle like');
             showError('Failed to like track: Could not create track record');
             return;
         }
-        
+
         const result = await ipcRenderer.invoke('db-toggle-like', trackId);
 
         if (result.success) {
@@ -1719,7 +1719,7 @@ async function getOrCreateTrackId(track) {
             artist: track.artist_name || track.artist || track.uploader || 'Unknown',
             duration: track.duration || 0
         };
-        
+
         const createResult = await ipcRenderer.invoke('db-create-track', trackData);
 
         if (createResult.success && createResult.data) {
@@ -2266,17 +2266,17 @@ window.ipcRenderer = ipcRenderer;
 
 // Handle deletion checks from main process
 ipcRenderer.on('check-if-playing', (event, youtubeId) => {
-    const isPlaying = window.player && 
-                      window.player.currentTrack && 
-                      window.player.currentTrack.youtube_id === youtubeId &&
-                      window.player.isPlaying;
-    
+    const isPlaying = window.player &&
+        window.player.currentTrack &&
+        window.player.currentTrack.youtube_id === youtubeId &&
+        window.player.isPlaying;
+
     ipcRenderer.send('check-if-playing-response', isPlaying);
 });
 
 ipcRenderer.on('stop-track-for-deletion', (event, youtubeId) => {
-    if (window.player && 
-        window.player.currentTrack && 
+    if (window.player &&
+        window.player.currentTrack &&
         window.player.currentTrack.youtube_id === youtubeId) {
         // Stop playback and move to next track or clear
         if (window.player.hasNext()) {

@@ -375,18 +375,18 @@ async function initializeDownloadQueue() {
     const invalidIdsResult = db.exec(
       "SELECT id, youtube_id, title FROM download_queue WHERE status IN ('pending', 'failed')"
     );
-    
+
     if (invalidIdsResult.length > 0 && invalidIdsResult[0].values.length > 0) {
       invalidIdsResult[0].values.forEach(row => {
         const id = row[0];
         const youtubeId = row[1];
         const title = row[2];
-        
-        if (!youtubeId || 
-            youtubeId.length !== 11 || 
-            youtubeId.startsWith('UC') || 
-            youtubeId.startsWith('UU') || 
-            youtubeId.startsWith('PL')) {
+
+        if (!youtubeId ||
+          youtubeId.length !== 11 ||
+          youtubeId.startsWith('UC') ||
+          youtubeId.startsWith('UU') ||
+          youtubeId.startsWith('PL')) {
           console.log(`Removing invalid download from queue: ${title} (${youtubeId})`);
           db.run('DELETE FROM download_queue WHERE id = ?', [id]);
         }
@@ -496,13 +496,13 @@ async function processDownloadQueue() {
 
     // Validate video ID before attempting download
     const youtubeId = queueItem.youtube_id;
-    if (!youtubeId || 
-        youtubeId.length !== 11 || 
-        youtubeId.startsWith('UC') || 
-        youtubeId.startsWith('UU') || 
-        youtubeId.startsWith('PL')) {
+    if (!youtubeId ||
+      youtubeId.length !== 11 ||
+      youtubeId.startsWith('UC') ||
+      youtubeId.startsWith('UU') ||
+      youtubeId.startsWith('PL')) {
       console.log(`Skipping invalid video ID: ${queueItem.title} (${youtubeId})`);
-      
+
       // Mark as failed and remove from queue
       db.run(
         'UPDATE download_queue SET status = \'failed\', error_message = ? WHERE id = ?',
@@ -510,7 +510,7 @@ async function processDownloadQueue() {
       );
       saveDatabase();
       downloadQueue.shift();
-      
+
       // Notify renderer
       if (mainWindow) {
         mainWindow.webContents.send('download-failed', {
@@ -520,7 +520,7 @@ async function processDownloadQueue() {
           willRetry: false
         });
       }
-      
+
       continue;
     }
 
@@ -685,10 +685,10 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
     // Notify renderer to check if this track is currently playing
     const isPlaying = await new Promise((resolve) => {
       mainWindow.webContents.send('check-if-playing', youtubeId);
-      
+
       // Wait for response with timeout
       const timeout = setTimeout(() => resolve(false), 1000);
-      
+
       ipcMain.once('check-if-playing-response', (e, playing) => {
         clearTimeout(timeout);
         resolve(playing);
@@ -709,15 +709,15 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
         console.log(`Deleted file: ${filePath}`);
       } catch (fileError) {
         console.warn(`Failed to delete file: ${filePath}`, fileError);
-        
+
         // If file is still busy, return error instead of continuing
         if (fileError.code === 'EBUSY' || fileError.code === 'EPERM') {
-          return { 
-            success: false, 
-            error: 'File is currently in use. Please stop playback and try again.' 
+          return {
+            success: false,
+            error: 'File is currently in use. Please stop playback and try again.'
           };
         }
-        
+
         // For other errors, log but continue with database deletion
         console.warn('Continuing with database deletion despite file error');
       }

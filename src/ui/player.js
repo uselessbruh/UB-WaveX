@@ -40,16 +40,16 @@ class AudioPlayer {
 
         this.currentTrack = null;
         this.savedRestoreTime = 0; // Store time position from restoration
-        
+
         // Spotify-style queue system
         this.temporaryQueue = []; // Tracks added via "Play Next" or "Add to Queue"
         this.contextQueue = []; // Tracks from current context (playlist, liked, downloads)
         this.contextQueueIndex = -1; // Current position in context queue
-        
+
         // Legacy queue (for compatibility)
         this.queue = [];
         this.queueIndex = -1;
-        
+
         this.preloadCache = new Map(); // Cache for preloaded tracks (max 5 or 30 mins)
         this.maxPreloadTracks = 5;
         this.maxPreloadDuration = 1800; // 30 minutes in seconds
@@ -179,7 +179,7 @@ class AudioPlayer {
         // Single track playback (from search/online) - no auto-play next
         // Clear temporary queue when explicitly playing a track
         this.temporaryQueue = [];
-        
+
         this.playbackContext = {
             type: 'online',
             id: null,
@@ -187,12 +187,12 @@ class AudioPlayer {
             tracks: [track],
             shuffle: false
         };
-        
+
         this.contextQueue = [track];
         this.contextQueueIndex = 0;
         this.queue = [track];
         this.queueIndex = 0;
-        
+
         await this.loadAndPlayTrack(track);
         this.updatePlaybackSourceUI();
     }
@@ -205,7 +205,7 @@ class AudioPlayer {
         this.contextQueueIndex = startIndex;
         this.queue = tracks;
         this.queueIndex = startIndex;
-        
+
         await this.loadAndPlayTrack(tracks[startIndex]);
 
         // Preload upcoming tracks
@@ -216,7 +216,7 @@ class AudioPlayer {
         // Play from a specific context (playlist, liked, downloads)
         // Clear temporary queue when playing a new context
         this.temporaryQueue = [];
-        
+
         // context = { type: 'playlist'|'liked'|'downloads', id, name, tracks, startIndex, shuffle }
         this.playbackContext = {
             type: context.type,
@@ -233,7 +233,7 @@ class AudioPlayer {
             this.contextQueue = [...context.tracks];
             this.contextQueueIndex = context.startIndex || 0;
         }
-        
+
         // Update legacy queue for compatibility
         this.queue = [...this.contextQueue];
         this.queueIndex = this.contextQueueIndex;
@@ -273,7 +273,7 @@ class AudioPlayer {
         this.contextQueue = this.shuffledIndices.map(i => tracks[i]);
         this.contextQueueIndex = 0; // Current track is now at index 0
         this.playbackContext.shuffle = true;
-        
+
         // Update legacy queue
         this.queue = [...this.contextQueue];
         this.queueIndex = 0;
@@ -291,7 +291,7 @@ class AudioPlayer {
             this.playbackContext.shuffle = false;
             this.shuffledIndices = [];
             this.originalQueue = [];
-            
+
             // Update legacy queue
             this.queue = [...this.contextQueue];
             this.queueIndex = this.contextQueueIndex;
@@ -526,7 +526,7 @@ class AudioPlayer {
                     if (result.success) {
                         this.audio.src = result.data.url;
                         console.log('Set audio source to:', result.data.url);
-                        
+
                         // Restore saved time position if we have one
                         if (this.savedRestoreTime > 0) {
                             console.log('Restoring playback position to:', this.savedRestoreTime);
@@ -542,7 +542,7 @@ class AudioPlayer {
                     return;
                 }
             }
-            
+
             if (this.audio.src) {
                 this.audio.play();
             }
@@ -551,7 +551,7 @@ class AudioPlayer {
 
     async playNext() {
         let nextTrack = null;
-        
+
         // Spotify logic: Check temporary queue first, then context queue
         if (this.temporaryQueue.length > 0) {
             // Play from temporary queue
@@ -564,7 +564,7 @@ class AudioPlayer {
             nextTrack = this.contextQueue[this.contextQueueIndex];
             this.queueIndex++;
         }
-        
+
         if (nextTrack) {
             await this.loadAndPlayTrack(nextTrack);
             // Preload more tracks
@@ -581,7 +581,7 @@ class AudioPlayer {
             // This matches Spotify behavior - can't go back to temporary queue items
             this.contextQueueIndex--;
             await this.loadAndPlayTrack(this.contextQueue[this.contextQueueIndex]);
-            
+
             // Rebuild combined queue
             this.rebuildCombinedQueue();
         } else {
@@ -595,12 +595,12 @@ class AudioPlayer {
         // - Temporary queue (user-added tracks) plays BEFORE context queue
         // - playNext adds to front of temporary queue
         // - addToQueue adds to end of temporary queue
-        
+
         if (!track || !track.youtube_id) {
             console.error('Invalid track:', track);
             return;
         }
-        
+
         if (playNext) {
             // Add to front of temporary queue
             this.temporaryQueue.unshift(track);
@@ -608,11 +608,11 @@ class AudioPlayer {
             // Add to end of temporary queue
             this.temporaryQueue.push(track);
         }
-        
+
         // Rebuild combined queue for compatibility
         this.rebuildCombinedQueue();
     }
-    
+
     rebuildCombinedQueue() {
         // Combined queue = current track + temporary queue + remaining context queue
         const remainingContext = this.contextQueue.slice(this.contextQueueIndex + 1);
@@ -623,7 +623,7 @@ class AudioPlayer {
         ].filter(t => t); // Filter out null/undefined
         this.queueIndex = 0;
     }
-    
+
     getQueueInfo() {
         // Utility method to get queue status for debugging/UI
         return {
@@ -647,7 +647,7 @@ class AudioPlayer {
         this.contextQueue = [];
         this.contextQueueIndex = -1;
         this.preloadCache.clear();
-        
+
         // Clear playback context
         this.playbackContext = {
             type: null,
@@ -656,7 +656,7 @@ class AudioPlayer {
             tracks: [],
             shuffle: false
         };
-        
+
         this.updatePlaybackSourceUI();
     }
 
@@ -846,12 +846,12 @@ class AudioPlayer {
                 this.temporaryQueue = state.temporaryQueue || [];
                 this.contextQueue = state.contextQueue || [];
                 this.contextQueueIndex = state.contextQueueIndex || 0;
-                
+
                 // Restore playback context
                 if (state.playbackContext) {
                     this.playbackContext = state.playbackContext;
                 }
-                
+
                 // Restore shuffle state
                 if (state.originalQueue) {
                     this.originalQueue = state.originalQueue;
@@ -882,7 +882,7 @@ class AudioPlayer {
                 // Ensure audio is paused (don't auto-play on restore)
                 this.audio.pause();
                 this.isPlaying = false;
-                
+
                 // Update UI
                 this.updatePlaybackSourceUI();
 
