@@ -61,9 +61,11 @@
                 <!-- Search View -->
                 <div id="view-search" class="view active">
                     <div class="search-bar">
-                        <input type="text" id="search-input" placeholder="Search for songs, artists, albums..." />
+                        <div class="search-input-wrapper">
+                            <input type="text" id="search-input" placeholder="Search for songs, artists, albums..." />
+                            <button id="btn-clear-search" class="clear-search-btn" style="display: none;" title="Clear search">×</button>
+                        </div>
                         <button id="btn-search" class="btn-primary">Search</button>
-                        <button id="btn-clear-search" class="btn-secondary" style="display: none;">Clear</button>
                     </div>
                     <div id="search-results" class="track-list">
                     </div>
@@ -80,7 +82,7 @@
                 <!-- Downloads View -->
                 <div id="view-downloads" class="view">
                     <div class="view-header">
-                        <div class="search-bar">
+                        <div class="search-bar-center">
                             <input type="text" id="downloads-search-input" placeholder="Search in downloads..." />
                         </div>
                         <button id="btn-shuffle-downloads" class="btn-shuffle" title="Shuffle Play">
@@ -99,7 +101,7 @@
                 <!-- Liked Songs View -->
                 <div id="view-liked" class="view">
                     <div class="view-header">
-                        <div class="search-bar">
+                        <div class="search-bar-center">
                             <input type="text" id="liked-search-input" placeholder="Search in liked songs..." />
                         </div>
                         <button id="btn-shuffle-liked" class="btn-shuffle" title="Shuffle Play">
@@ -117,7 +119,7 @@
 
                 <!-- Settings View -->
                 <div id="view-settings" class="view">
-                    <div class="search-bar">
+                    <div class="search-bar-center">
                         <input type="text" id="settings-search-input" placeholder="Search settings..." />
                     </div>
                     <h2>Settings</h2>

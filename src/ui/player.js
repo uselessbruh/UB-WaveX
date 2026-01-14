@@ -1,4 +1,32 @@
 // UB-WaveX Audio Player Engine
+// 
+// Queue System (Spotify-style):
+// ===============================
+// 
+// Two-tier queue system:
+// 1. Temporary Queue - User-added tracks via "Play Next" or "Add to Queue"
+// 2. Context Queue - Tracks from current playback source (playlist, liked, downloads)
+//
+// Playback order:
+// 1. Current track
+// 2. All tracks in temporary queue (FIFO for "Add to Queue", LIFO for "Play Next")
+// 3. Remaining tracks from context queue
+//
+// Key behaviors:
+// - Playing a new context (playlist/liked/downloads) clears temporary queue
+// - Playing a single track clears temporary queue
+// - Shuffle affects only context queue, not temporary queue
+// - Previous button only navigates context queue (can't go back through temporary queue)
+// - Temporary queue tracks are removed as they play (one-time playback)
+//
+// Example:
+// Context: Playlist (Track 3/10)
+// User: "Play Next" -> Song A
+// User: "Add to Queue" -> Song B
+// User: "Play Next" -> Song C
+// 
+// Result playback order:
+// Track 3 -> Song C -> Song A -> Song B -> Track 4 -> Track 5 -> ...
 
 class AudioPlayer {
     constructor() {
@@ -11,8 +39,17 @@ class AudioPlayer {
         }
 
         this.currentTrack = null;
+        this.savedRestoreTime = 0; // Store time position from restoration
+        
+        // Spotify-style queue system
+        this.temporaryQueue = []; // Tracks added via "Play Next" or "Add to Queue"
+        this.contextQueue = []; // Tracks from current context (playlist, liked, downloads)
+        this.contextQueueIndex = -1; // Current position in context queue
+        
+        // Legacy queue (for compatibility)
         this.queue = [];
         this.queueIndex = -1;
+        
         this.preloadCache = new Map(); // Cache for preloaded tracks (max 5 or 30 mins)
         this.maxPreloadTracks = 5;
         this.maxPreloadDuration = 1800; // 30 minutes in seconds
@@ -140,6 +177,9 @@ class AudioPlayer {
 
     async playTrack(track) {
         // Single track playback (from search/online) - no auto-play next
+        // Clear temporary queue when explicitly playing a track
+        this.temporaryQueue = [];
+        
         this.playbackContext = {
             type: 'online',
             id: null,
@@ -147,16 +187,25 @@ class AudioPlayer {
             tracks: [track],
             shuffle: false
         };
+        
+        this.contextQueue = [track];
+        this.contextQueueIndex = 0;
         this.queue = [track];
         this.queueIndex = 0;
+        
         await this.loadAndPlayTrack(track);
         this.updatePlaybackSourceUI();
     }
 
     async playQueue(tracks, startIndex = 0) {
         // Play a list of tracks as a queue (deprecated - use playContext instead)
+        // For backward compatibility, treat this as context queue
+        this.temporaryQueue = [];
+        this.contextQueue = tracks;
+        this.contextQueueIndex = startIndex;
         this.queue = tracks;
         this.queueIndex = startIndex;
+        
         await this.loadAndPlayTrack(tracks[startIndex]);
 
         // Preload upcoming tracks
@@ -165,6 +214,9 @@ class AudioPlayer {
 
     async playContext(context) {
         // Play from a specific context (playlist, liked, downloads)
+        // Clear temporary queue when playing a new context
+        this.temporaryQueue = [];
+        
         // context = { type: 'playlist'|'liked'|'downloads', id, name, tracks, startIndex, shuffle }
         this.playbackContext = {
             type: context.type,
@@ -174,16 +226,20 @@ class AudioPlayer {
             shuffle: context.shuffle || false
         };
 
-        // Setup queue based on shuffle
+        // Setup context queue based on shuffle
         if (context.shuffle) {
             this.enableShuffle(context.tracks, context.startIndex || 0);
         } else {
-            this.queue = [...context.tracks];
-            this.queueIndex = context.startIndex || 0;
+            this.contextQueue = [...context.tracks];
+            this.contextQueueIndex = context.startIndex || 0;
         }
+        
+        // Update legacy queue for compatibility
+        this.queue = [...this.contextQueue];
+        this.queueIndex = this.contextQueueIndex;
 
-        if (this.queue.length > 0) {
-            await this.loadAndPlayTrack(this.queue[this.queueIndex]);
+        if (this.contextQueue.length > 0) {
+            await this.loadAndPlayTrack(this.contextQueue[this.contextQueueIndex]);
             this.preloadUpcomingTracks();
             this.updatePlaybackSourceUI();
         }
@@ -214,9 +270,13 @@ class AudioPlayer {
 
         // Put current track first, then shuffled tracks
         this.shuffledIndices = [currentIndex, ...indices];
-        this.queue = this.shuffledIndices.map(i => tracks[i]);
-        this.queueIndex = 0; // Current track is now at index 0
+        this.contextQueue = this.shuffledIndices.map(i => tracks[i]);
+        this.contextQueueIndex = 0; // Current track is now at index 0
         this.playbackContext.shuffle = true;
+        
+        // Update legacy queue
+        this.queue = [...this.contextQueue];
+        this.queueIndex = 0;
     }
 
     disableShuffle() {
@@ -226,11 +286,15 @@ class AudioPlayer {
                 t => t.youtube_id === this.currentTrack.youtube_id
             );
 
-            this.queue = [...this.originalQueue];
-            this.queueIndex = currentIndex >= 0 ? currentIndex : 0;
+            this.contextQueue = [...this.originalQueue];
+            this.contextQueueIndex = currentIndex >= 0 ? currentIndex : 0;
             this.playbackContext.shuffle = false;
             this.shuffledIndices = [];
             this.originalQueue = [];
+            
+            // Update legacy queue
+            this.queue = [...this.contextQueue];
+            this.queueIndex = this.contextQueueIndex;
         }
     }
 
@@ -447,10 +511,38 @@ class AudioPlayer {
         }
     }
 
-    togglePlayPause() {
+    async togglePlayPause() {
         if (this.isPlaying) {
             this.audio.pause();
         } else {
+            // If no audio source, load it first (happens after restore for online tracks)
+            if (!this.audio.src && this.currentTrack) {
+                try {
+                    console.log('Loading stream URL for restored track:', this.currentTrack.youtube_id);
+                    window.appAPI.showLoading('Loading track...');
+                    const result = await window.ipcRenderer.invoke('get-stream-url', this.currentTrack.youtube_id);
+                    window.appAPI.hideLoading();
+
+                    if (result.success) {
+                        this.audio.src = result.data.url;
+                        console.log('Set audio source to:', result.data.url);
+                        
+                        // Restore saved time position if we have one
+                        if (this.savedRestoreTime > 0) {
+                            console.log('Restoring playback position to:', this.savedRestoreTime);
+                            this.audio.currentTime = this.savedRestoreTime;
+                            this.savedRestoreTime = 0; // Clear it after use
+                        }
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('Failed to load stream:', error);
+                    window.appAPI.showError(`Failed to load track: ${error.message}`);
+                    return;
+                }
+            }
+            
             if (this.audio.src) {
                 this.audio.play();
             }
@@ -458,10 +550,23 @@ class AudioPlayer {
     }
 
     async playNext() {
-        if (this.queueIndex < this.queue.length - 1) {
+        let nextTrack = null;
+        
+        // Spotify logic: Check temporary queue first, then context queue
+        if (this.temporaryQueue.length > 0) {
+            // Play from temporary queue
+            nextTrack = this.temporaryQueue.shift();
+            // Rebuild combined queue after removing from temporary queue
+            this.rebuildCombinedQueue();
+        } else if (this.contextQueueIndex < this.contextQueue.length - 1) {
+            // Play next from context queue
+            this.contextQueueIndex++;
+            nextTrack = this.contextQueue[this.contextQueueIndex];
             this.queueIndex++;
-            await this.loadAndPlayTrack(this.queue[this.queueIndex]);
-
+        }
+        
+        if (nextTrack) {
+            await this.loadAndPlayTrack(nextTrack);
             // Preload more tracks
             this.preloadUpcomingTracks();
         }
@@ -471,46 +576,88 @@ class AudioPlayer {
         if (this.audio.currentTime > 3) {
             // Restart current track if more than 3 seconds played
             this.audio.currentTime = 0;
-        } else if (this.queueIndex > 0) {
-            // Play previous track
-            this.queueIndex--;
-            await this.loadAndPlayTrack(this.queue[this.queueIndex]);
+        } else if (this.contextQueueIndex > 0) {
+            // Only allow going back in context queue, not through temporary queue
+            // This matches Spotify behavior - can't go back to temporary queue items
+            this.contextQueueIndex--;
+            await this.loadAndPlayTrack(this.contextQueue[this.contextQueueIndex]);
+            
+            // Rebuild combined queue
+            this.rebuildCombinedQueue();
+        } else {
+            // At beginning, just restart current track
+            this.audio.currentTime = 0;
         }
     }
 
     addToQueue(track, playNext = false) {
-        if (playNext && this.queueIndex >= 0) {
-            // Insert after current track
-            this.queue.splice(this.queueIndex + 1, 0, track);
-
-            // If in shuffle mode, also update originalQueue
-            if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
-                this.originalQueue.splice(this.queueIndex + 1, 0, track);
-            }
+        // Spotify-style queue logic:
+        // - Temporary queue (user-added tracks) plays BEFORE context queue
+        // - playNext adds to front of temporary queue
+        // - addToQueue adds to end of temporary queue
+        
+        if (!track || !track.youtube_id) {
+            console.error('Invalid track:', track);
+            return;
+        }
+        
+        if (playNext) {
+            // Add to front of temporary queue
+            this.temporaryQueue.unshift(track);
         } else {
-            // Add to end of queue
-            this.queue.push(track);
-
-            // If in shuffle mode, also update originalQueue
-            if (this.playbackContext.shuffle && this.originalQueue.length > 0) {
-                this.originalQueue.push(track);
-            }
+            // Add to end of temporary queue
+            this.temporaryQueue.push(track);
         }
-
-        // Update context tracks if adding to an active context
-        if (this.playbackContext.tracks.length > 0) {
-            if (playNext) {
-                this.playbackContext.tracks.splice(this.queueIndex + 1, 0, track);
-            } else {
-                this.playbackContext.tracks.push(track);
-            }
-        }
+        
+        // Rebuild combined queue for compatibility
+        this.rebuildCombinedQueue();
+    }
+    
+    rebuildCombinedQueue() {
+        // Combined queue = current track + temporary queue + remaining context queue
+        const remainingContext = this.contextQueue.slice(this.contextQueueIndex + 1);
+        this.queue = [
+            this.currentTrack,
+            ...this.temporaryQueue,
+            ...remainingContext
+        ].filter(t => t); // Filter out null/undefined
+        this.queueIndex = 0;
+    }
+    
+    getQueueInfo() {
+        // Utility method to get queue status for debugging/UI
+        return {
+            currentTrack: this.currentTrack,
+            temporaryQueue: this.temporaryQueue,
+            temporaryQueueLength: this.temporaryQueue.length,
+            contextQueue: this.contextQueue,
+            contextQueueIndex: this.contextQueueIndex,
+            contextQueueRemaining: this.contextQueue.length - this.contextQueueIndex - 1,
+            playbackContext: this.playbackContext,
+            combinedQueue: this.queue,
+            totalTracksInQueue: this.temporaryQueue.length + (this.contextQueue.length - this.contextQueueIndex - 1)
+        };
     }
 
     clearQueue() {
+        // Clear all queue types
         this.queue = [];
         this.queueIndex = -1;
+        this.temporaryQueue = [];
+        this.contextQueue = [];
+        this.contextQueueIndex = -1;
         this.preloadCache.clear();
+        
+        // Clear playback context
+        this.playbackContext = {
+            type: null,
+            id: null,
+            name: null,
+            tracks: [],
+            shuffle: false
+        };
+        
+        this.updatePlaybackSourceUI();
     }
 
     // Event Handlers
@@ -539,9 +686,9 @@ class AudioPlayer {
     }
 
     async onTrackEnded() {
-        // Auto-play next track based on context
-        if (this.playbackContext.type === 'online') {
-            // Single track from search - don't auto-play
+        // Auto-play next track based on Spotify queue logic
+        if (this.playbackContext.type === 'online' && this.temporaryQueue.length === 0) {
+            // Single track from search with no queued tracks - don't auto-play
             this.isPlaying = false;
             const playPauseIcon = this.btnPlayPause.querySelector('.play-pause-icon');
             if (playPauseIcon) {
@@ -551,8 +698,8 @@ class AudioPlayer {
                 playPauseIcon.dataset.icon = 'play';
                 playPauseIcon.alt = 'Play';
             }
-        } else if (this.queueIndex < this.queue.length - 1) {
-            // Auto-play next in context (playlist, liked, downloads, or custom queue)
+        } else if (this.temporaryQueue.length > 0 || this.contextQueueIndex < this.contextQueue.length - 1) {
+            // Play next from temporary queue or context queue
             await this.playNext();
         } else {
             // Queue finished
@@ -668,8 +815,17 @@ class AudioPlayer {
                 track: this.currentTrack,
                 currentTime: this.audio.currentTime || 0,
                 isPlaying: this.isPlaying,
+                // Save both queue systems
                 queue: this.queue,
-                queueIndex: this.queueIndex
+                queueIndex: this.queueIndex,
+                temporaryQueue: this.temporaryQueue,
+                contextQueue: this.contextQueue,
+                contextQueueIndex: this.contextQueueIndex,
+                // Save playback context
+                playbackContext: this.playbackContext,
+                // Save shuffle state
+                originalQueue: this.originalQueue,
+                shuffledIndices: this.shuffledIndices
             };
             localStorage.setItem('lastPlaybackState', JSON.stringify(state));
             console.log('Saved playback state:', state);
@@ -684,22 +840,51 @@ class AudioPlayer {
                 const state = JSON.parse(savedState);
                 console.log('Restoring playback state:', state);
 
-                // Restore queue
+                // Restore all queue types
                 this.queue = state.queue || [];
                 this.queueIndex = state.queueIndex || 0;
-
-                // Load the track
-                await this.loadAndPlayTrack(state.track);
-
-                // Seek to saved position
-                if (state.currentTime > 0) {
-                    this.audio.currentTime = state.currentTime;
+                this.temporaryQueue = state.temporaryQueue || [];
+                this.contextQueue = state.contextQueue || [];
+                this.contextQueueIndex = state.contextQueueIndex || 0;
+                
+                // Restore playback context
+                if (state.playbackContext) {
+                    this.playbackContext = state.playbackContext;
+                }
+                
+                // Restore shuffle state
+                if (state.originalQueue) {
+                    this.originalQueue = state.originalQueue;
+                }
+                if (state.shuffledIndices) {
+                    this.shuffledIndices = state.shuffledIndices;
                 }
 
-                // If it wasn't playing, pause it
-                if (!state.isPlaying) {
-                    this.audio.pause();
+                // Load the track WITHOUT auto-playing
+                const track = state.track;
+                this.currentTrack = track;
+                this.updatePlayerUI(track);
+
+                // Prepare audio source but don't play
+                if (track.file_path && track.downloaded) {
+                    this.audio.src = `file:///${track.file_path.replace(/\\/g, '/')}`;
+                    // Seek to saved position for downloaded tracks
+                    if (state.currentTime > 0) {
+                        this.audio.currentTime = state.currentTime;
+                    }
+                } else {
+                    // For online tracks, we'll load the stream URL when user presses play
+                    // Save the time to restore after loading stream
+                    this.savedRestoreTime = state.currentTime || 0;
+                    console.log('Track restored, stream URL will load on play at position:', this.savedRestoreTime);
                 }
+
+                // Ensure audio is paused (don't auto-play on restore)
+                this.audio.pause();
+                this.isPlaying = false;
+                
+                // Update UI
+                this.updatePlaybackSourceUI();
 
             } catch (error) {
                 console.error('Failed to restore playback state:', error);
@@ -733,4 +918,6 @@ function exposePlayerFunctions() {
     window.playContext = (context) => player.playContext(context);
     window.addToQueue = (track, playNext = false) => player.addToQueue(track, playNext);
     window.toggleShuffle = () => player.toggleShuffle();
+    window.clearQueue = () => player.clearQueue();
+    window.getQueueInfo = () => player.getQueueInfo();
 }

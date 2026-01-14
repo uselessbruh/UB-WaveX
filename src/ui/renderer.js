@@ -286,6 +286,43 @@ function setupNavigation() {
     });
 }
 
+// Helper function to update navigation state and icons
+function updateNavigationState(view) {
+    const theme = getCurrentTheme();
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    // Update all nav items
+    navItems.forEach(n => {
+        n.classList.remove('active');
+        const icon = n.querySelector('.icon.theme-icon');
+        if (icon) {
+            const iconType = icon.dataset.icon;
+            // Inactive icons: Black for light theme, White for dark theme
+            const suffix = theme === 'light' ? 'Black' : 'White';
+            icon.src = `../public/${iconType}${suffix}.png`;
+        }
+    });
+
+    // Activate the target nav item
+    const targetNavItem = document.querySelector(`[data-view="${view}"]`);
+    if (targetNavItem) {
+        targetNavItem.classList.add('active');
+        
+        // Set active icon based on theme
+        const activeIcon = targetNavItem.querySelector('.icon.theme-icon');
+        if (activeIcon) {
+            const iconType = activeIcon.dataset.icon;
+            const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
+            activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
+        }
+    }
+
+    // Clear playlist selection
+    document.querySelectorAll('.playlist-item').forEach(p =>
+        p.classList.remove('active')
+    );
+}
+
 function switchView(view) {
     currentView = view;
     currentPlaylistId = null;
@@ -331,6 +368,9 @@ async function handleSearch() {
     const query = searchInput.value.trim();
     if (!query) return;
 
+    // Show clear button
+    btnClearSearch.style.display = 'block';
+
     // Perform music search
     performSearch();
 }
@@ -339,6 +379,9 @@ async function handleSearch() {
 async function performSearch() {
     const query = searchInput.value.trim();
     if (!query) return;
+
+    // Show clear button
+    btnClearSearch.style.display = 'block';
 
     if (!backendReady) {
         showError('Backend is still initializing...');
@@ -479,9 +522,39 @@ async function displaySearchResults(tracks) {
         return;
     }
 
+    // Filter out invalid video IDs (channels, playlists, etc.)
+    const validTracks = tracks.filter(track => {
+        // YouTube video IDs are 11 characters, channel IDs start with UC and are longer
+        const videoId = track.youtube_id || track.video_id;
+        if (!videoId) return false;
+        
+        // Exclude channel IDs (start with UC, UU, or PL for playlists)
+        if (videoId.startsWith('UC') || videoId.startsWith('UU') || videoId.startsWith('PL')) {
+            console.log('Filtered out invalid ID:', videoId, track.title);
+            return false;
+        }
+        
+        return videoId.length === 11;
+    });
+
+    // Normalize youtube_id field for all valid tracks
+    validTracks.forEach(track => {
+        if (!track.youtube_id && track.video_id) {
+            track.youtube_id = track.video_id;
+        }
+    });
+
+    if (validTracks.length === 0) {
+        searchResults.innerHTML = '<div class="empty-state"><p>No valid videos found</p></div>';
+        updateSearchViewVisibility();
+        return;
+    }
+
     // Enrich tracks with liked/downloaded status from database
-    const enrichResult = await ipcRenderer.invoke('enrich-tracks', tracks);
-    const enrichedTracks = enrichResult.success ? enrichResult.data : tracks;
+    const enrichResult = await ipcRenderer.invoke('enrich-tracks', validTracks);
+    const enrichedTracks = enrichResult.success ? enrichResult.data : validTracks;
+
+    console.log('Enriched tracks:', enrichedTracks);
 
     enrichedTracks.forEach(track => {
         const trackEl = createTrackElement(track);
@@ -546,7 +619,13 @@ function createTrackElement(track, options = {}) {
         btnLike.appendChild(likeIcon);
         btnLike.onclick = (e) => {
             e.stopPropagation();
-            toggleLike(track);
+            // Find the parent track-item element
+            let element = e.target;
+            while (element && !element.classList.contains('track-item')) {
+                element = element.parentElement;
+            }
+            const trackData = (element && element.__trackData) || track;
+            toggleLike(trackData);
         };
         actions.appendChild(btnLike);
     }
@@ -619,6 +698,9 @@ function createTrackElement(track, options = {}) {
         e.preventDefault();
         showContextMenu(e, track);
     };
+
+    // Store track data on the element for later reference
+    div.__trackData = track;
 
     return div;
 }
@@ -781,7 +863,19 @@ async function loadLikedSongs() {
 
 async function toggleLike(track) {
     try {
-        const trackId = track.id || await getOrCreateTrackId(track);
+        let trackId;
+        if (track.id) {
+            trackId = track.id;
+        } else {
+            trackId = await getOrCreateTrackId(track);
+        }
+        
+        if (!trackId) {
+            console.error('Failed to get track ID, cannot toggle like');
+            showError('Failed to like track: Could not create track record');
+            return;
+        }
+        
         const result = await ipcRenderer.invoke('db-toggle-like', trackId);
 
         if (result.success) {
@@ -790,7 +884,7 @@ async function toggleLike(track) {
 
             // Update the like button icon in all track items with this track
             document.querySelectorAll(`.track-item[data-youtube-id="${track.youtube_id}"]`).forEach(trackEl => {
-                const likeBtn = trackEl.querySelector('.btn-track-action');
+                const likeBtn = trackEl.querySelector('.like-btn');
                 const likeIcon = likeBtn?.querySelector('img');
 
                 if (likeIcon) {
@@ -1381,7 +1475,7 @@ async function deletePlaylist(playlist) {
             loadPlaylists();
             if (currentPlaylistId === playlist.id) {
                 switchView('search');
-                document.querySelector('[data-view="search"]').classList.add('active');
+                updateNavigationState('search');
             }
             showSuccess('Playlist deleted');
         } else {
@@ -1610,26 +1704,34 @@ async function addTrackToPlaylist(track, playlistId, playlistName) {
 }
 
 async function getOrCreateTrackId(track) {
-    // Check if track exists in database
-    const checkResult = await ipcRenderer.invoke('db-get-track-by-youtube-id', track.youtube_id);
+    try {
+        // Check if track exists in database
+        const checkResult = await ipcRenderer.invoke('db-get-track-by-youtube-id', track.youtube_id);
 
-    if (checkResult.success && checkResult.data) {
-        return checkResult.data.id;
+        if (checkResult.success && checkResult.data) {
+            return checkResult.data.id;
+        }
+
+        // Track doesn't exist, create it
+        const trackData = {
+            youtube_id: track.youtube_id,
+            title: track.title,
+            artist: track.artist_name || track.artist || track.uploader || 'Unknown',
+            duration: track.duration || 0
+        };
+        
+        const createResult = await ipcRenderer.invoke('db-create-track', trackData);
+
+        if (createResult.success && createResult.data) {
+            return createResult.data.id;
+        }
+
+        console.error('Failed to create track:', createResult.error || 'Unknown error');
+        throw new Error('Failed to create track in database');
+    } catch (error) {
+        console.error('Error in getOrCreateTrackId:', error);
+        return undefined;
     }
-
-    // Track doesn't exist, create it
-    const createResult = await ipcRenderer.invoke('db-create-track', {
-        youtube_id: track.youtube_id,
-        title: track.title,
-        artist: track.artist_name || track.artist || track.uploader,
-        duration: track.duration
-    });
-
-    if (createResult.success) {
-        return createResult.data.id;
-    }
-
-    throw new Error('Failed to create track in database');
 }
 
 // Utility Functions
@@ -1643,7 +1745,6 @@ function displayTracks(container, tracks, options = {}) {
 
     tracks.forEach(track => {
         const trackEl = createTrackElement(track, options);
-        trackEl.__trackData = track; // Store track data on element
         container.appendChild(trackEl);
     });
 }
@@ -1803,12 +1904,6 @@ function updateTrackDownloadStatus(track, isDownloaded = true) {
             }
         }
     });
-}
-
-async function getOrCreateTrackId(track) {
-    // If track doesn't have an ID, we need to ensure it's in the database
-    // This is handled by the Python core when getting stream URL
-    return track.id;
 }
 
 // Icon Management
@@ -2065,6 +2160,9 @@ function createRecentPlayCube(track) {
     const cube = document.createElement('div');
     cube.className = 'recent-play-cube';
 
+    // Store track data on element for like button and other operations
+    cube.__trackData = track;
+
     // Track info
     const title = document.createElement('div');
     title.className = 'cube-title';
@@ -2165,3 +2263,29 @@ window.renderer = {
 
 // Expose ipcRenderer for player.js
 window.ipcRenderer = ipcRenderer;
+
+// Handle deletion checks from main process
+ipcRenderer.on('check-if-playing', (event, youtubeId) => {
+    const isPlaying = window.player && 
+                      window.player.currentTrack && 
+                      window.player.currentTrack.youtube_id === youtubeId &&
+                      window.player.isPlaying;
+    
+    ipcRenderer.send('check-if-playing-response', isPlaying);
+});
+
+ipcRenderer.on('stop-track-for-deletion', (event, youtubeId) => {
+    if (window.player && 
+        window.player.currentTrack && 
+        window.player.currentTrack.youtube_id === youtubeId) {
+        // Stop playback and move to next track or clear
+        if (window.player.hasNext()) {
+            window.player.playNext();
+        } else {
+            window.player.pause();
+            window.player.audio.src = '';
+            window.player.currentTrack = null;
+            window.player.updatePlayerUI();
+        }
+    }
+});
