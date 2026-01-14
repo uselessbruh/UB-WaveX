@@ -288,6 +288,8 @@ function setupEventListeners() {
     // Context Menu
     document.addEventListener('click', () => {
         contextMenu.classList.remove('visible');
+        document.getElementById('downloads-view-menu')?.classList.remove('visible');
+        document.getElementById('liked-view-menu')?.classList.remove('visible');
     });
 
     contextMenu.addEventListener('click', (e) => {
@@ -298,6 +300,22 @@ function setupEventListeners() {
             } else {
                 handleContextMenuAction(action);
             }
+        }
+    });
+
+    // Downloads view context menu
+    document.getElementById('downloads-view-menu')?.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        if (action) {
+            handleViewContextMenuAction('downloads', action);
+        }
+    });
+
+    // Liked view context menu
+    document.getElementById('liked-view-menu')?.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        if (action) {
+            handleViewContextMenuAction('liked', action);
         }
     });
 }

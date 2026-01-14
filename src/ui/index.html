@@ -66,13 +66,17 @@
             <div class="content-body">
                 <!-- Search View -->
                 <div id="view-search" class="view active">
-                    <div class="search-bar">
-                        <div class="search-input-wrapper">
-                            <input type="text" id="search-input" placeholder="Search for songs, artists, albums..." />
-                            <button id="btn-clear-search" class="clear-search-btn" style="display: none;"
-                                title="Clear search">×</button>
+                    <div class="view-header">
+                        <div class="view-header-content">
+                            <div class="search-bar">
+                                <div class="search-input-wrapper">
+                                    <input type="text" id="search-input" placeholder="Search for songs, artists, albums..." />
+                                    <button id="btn-clear-search" class="clear-search-btn" style="display: none;"
+                                        title="Clear search">×</button>
+                                </div>
+                                <button id="btn-search" class="btn-primary">Search</button>
+                            </div>
                         </div>
-                        <button id="btn-search" class="btn-primary">Search</button>
                     </div>
                     <div id="search-results" class="track-list">
                     </div>
@@ -155,10 +159,16 @@
 
                 <!-- Settings View -->
                 <div id="view-settings" class="view">
-                    <div class="search-bar-center">
-                        <input type="text" id="settings-search-input" placeholder="Search settings..." />
+                    <div class="view-header">
+                        <div class="view-header-content">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="settings-search-input" placeholder="Search settings..." />
+                            </div>
+                            <div class="title-with-actions">
+                                <h2>Settings</h2>
+                            </div>
+                        </div>
                     </div>
-                    <h2>Settings</h2>
                     <div class="settings-container">
                         <div class="settings-section">
                             <h3>Appearance</h3>
