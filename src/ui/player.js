@@ -463,11 +463,11 @@ class AudioPlayer {
     showPlayButtonLoading() {
         const playPauseBtn = document.getElementById('btn-play-pause');
         if (!playPauseBtn) return;
-        
+
         // Hide all images in the button
         const imgs = playPauseBtn.querySelectorAll('img');
         imgs.forEach(img => img.style.display = 'none');
-        
+
         // Create and add spinner
         const spinner = document.createElement('div');
         spinner.className = 'play-button-loader';
@@ -477,11 +477,11 @@ class AudioPlayer {
     hidePlayButtonLoading() {
         const playPauseBtn = document.getElementById('btn-play-pause');
         if (!playPauseBtn) return;
-        
+
         // Remove spinner
         const spinner = playPauseBtn.querySelector('.play-button-loader');
         if (spinner) spinner.remove();
-        
+
         // Show images again
         const imgs = playPauseBtn.querySelectorAll('img');
         imgs.forEach(img => img.style.display = 'block');

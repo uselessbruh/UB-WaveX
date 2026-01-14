@@ -2481,12 +2481,12 @@ async function downloadAllPlaylist() {
 function showViewContextMenu(event, viewType) {
     event.preventDefault();
     event.stopPropagation();
-    
+
     // Close all menus first
     document.querySelectorAll('.context-menu').forEach(menu => {
         menu.classList.remove('visible');
     });
-    
+
     let menuElement;
 
     if (viewType === 'downloads') {
@@ -2560,7 +2560,7 @@ function handleViewContextMenuAction(viewType, action) {
     // Close the menu
     document.getElementById('downloads-view-menu')?.classList.remove('visible');
     document.getElementById('liked-view-menu')?.classList.remove('visible');
-    
+
     if (viewType === 'downloads') {
         if (action === 'play-all') {
             playAllDownloads();
