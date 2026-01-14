@@ -195,6 +195,67 @@ function setupEventListeners() {
         shufflePlay('playlist');
     });
 
+    // Play All buttons
+    document.getElementById('btn-play-all-downloads')?.addEventListener('click', () => {
+        playAllDownloads();
+    });
+
+    document.getElementById('btn-play-all-liked')?.addEventListener('click', () => {
+        playAllLiked();
+    });
+
+    document.getElementById('btn-play-all-playlist')?.addEventListener('click', () => {
+        playAllPlaylist();
+    });
+
+    // Shuffle All buttons (alternative shuffle buttons in view headers)
+    document.getElementById('btn-shuffle-all-downloads')?.addEventListener('click', () => {
+        shufflePlay('downloads');
+    });
+
+    document.getElementById('btn-shuffle-all-liked')?.addEventListener('click', () => {
+        shufflePlay('liked');
+    });
+
+    document.getElementById('btn-shuffle-all-playlist')?.addEventListener('click', () => {
+        shufflePlay('playlist');
+    });
+
+    // Download All buttons
+    document.getElementById('btn-download-all-liked')?.addEventListener('click', () => {
+        downloadAllLiked();
+    });
+
+    document.getElementById('btn-download-all-playlist')?.addEventListener('click', () => {
+        downloadAllPlaylist();
+    });
+
+    // Nav menu buttons (3-dot buttons)
+    document.querySelectorAll('.nav-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const view = btn.dataset.view;
+            showViewContextMenu(e, view);
+        });
+    });
+
+    // Right-click on Downloads and Liked nav items
+    const downloadsNavItem = document.querySelector('.nav-item[data-view="downloads"]');
+    const likedNavItem = document.querySelector('.nav-item[data-view="liked"]');
+
+    downloadsNavItem?.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showViewContextMenu(e, 'downloads');
+    });
+
+    likedNavItem?.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showViewContextMenu(e, 'liked');
+    });
+
     // Theme switcher
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -252,30 +313,8 @@ function setupNavigation() {
             if (view) {
                 switchView(view);
 
-                // Update active state and icons
-                const theme = getCurrentTheme();
-                navItems.forEach(n => {
-                    n.classList.remove('active');
-                    const icon = n.querySelector('.icon.theme-icon');
-                    if (icon) {
-                        const iconType = icon.dataset.icon;
-                        // Inactive icons: Black for light theme, White for dark theme
-                        const suffix = theme === 'light' ? 'Black' : 'White';
-                        icon.src = `../public/${iconType}${suffix}.png`;
-                    }
-                });
-
-                item.classList.add('active');
-
-                // Set active icon based on theme
-                // Dark theme: white bg, use black icon
-                // Light theme: black bg, use white icon
-                const activeIcon = item.querySelector('.icon.theme-icon');
-                if (activeIcon) {
-                    const iconType = activeIcon.dataset.icon;
-                    const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
-                    activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
-                }
+                // Update navigation state with icons
+                updateNavigationState(view);
 
                 // Clear playlist selection
                 document.querySelectorAll('.playlist-item').forEach(p =>
@@ -286,42 +325,7 @@ function setupNavigation() {
     });
 }
 
-// Helper function to update navigation state and icons
-function updateNavigationState(view) {
-    const theme = getCurrentTheme();
-    const navItems = document.querySelectorAll('.nav-item');
-
-    // Update all nav items
-    navItems.forEach(n => {
-        n.classList.remove('active');
-        const icon = n.querySelector('.icon.theme-icon');
-        if (icon) {
-            const iconType = icon.dataset.icon;
-            // Inactive icons: Black for light theme, White for dark theme
-            const suffix = theme === 'light' ? 'Black' : 'White';
-            icon.src = `../public/${iconType}${suffix}.png`;
-        }
-    });
-
-    // Activate the target nav item
-    const targetNavItem = document.querySelector(`[data-view="${view}"]`);
-    if (targetNavItem) {
-        targetNavItem.classList.add('active');
-
-        // Set active icon based on theme
-        const activeIcon = targetNavItem.querySelector('.icon.theme-icon');
-        if (activeIcon) {
-            const iconType = activeIcon.dataset.icon;
-            const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
-            activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
-        }
-    }
-
-    // Clear playlist selection
-    document.querySelectorAll('.playlist-item').forEach(p =>
-        p.classList.remove('active')
-    );
-}
+// Helper function to update navigation state and icons - moved to bottom of file
 
 function switchView(view) {
     currentView = view;
@@ -1944,6 +1948,20 @@ function updateAllIcons() {
         }
     });
 
+    // Update nav menu 3-dot icons
+    document.querySelectorAll('.nav-item').forEach(item => {
+        const menuIcon = item.querySelector('.nav-menu-btn img');
+        if (menuIcon) {
+            if (item.classList.contains('active')) {
+                // Active nav: White for light theme, Black for dark theme
+                menuIcon.src = theme === 'light' ? '../public/3dotWhite.png' : '../public/3dotBlack.png';
+            } else {
+                // Inactive nav: Black for light theme, White for dark theme
+                menuIcon.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+            }
+        }
+    });
+
     // Update playlist 3-dot icons
     document.querySelectorAll('.playlist-item').forEach(item => {
         const menuIcon = item.querySelector('.playlist-menu-btn img');
@@ -2263,6 +2281,357 @@ window.renderer = {
 
 // Expose ipcRenderer for player.js
 window.ipcRenderer = ipcRenderer;
+
+// Play All Functions
+async function playAllDownloads() {
+    try {
+        const result = await ipcRenderer.invoke('db-get-downloads');
+        if (result.success && result.data.length > 0) {
+            result.data.forEach(track => track.downloaded = true);
+            const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+            const tracks = enrichResult.success ? enrichResult.data : result.data;
+
+            window.playContext({
+                type: 'downloads',
+                name: 'Downloads',
+                tracks: tracks,
+                startIndex: 0,
+                shuffle: false
+            });
+
+            showInfo('Playing all downloads');
+        } else {
+            showInfo('No downloads to play');
+        }
+    } catch (error) {
+        console.error('Play all downloads error:', error);
+        showError('Failed to play downloads');
+    }
+}
+
+async function playAllLiked() {
+    try {
+        const result = await ipcRenderer.invoke('db-get-liked');
+        if (result.success && result.data.length > 0) {
+            const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+            const tracks = enrichResult.success ? enrichResult.data : result.data;
+
+            window.playContext({
+                type: 'liked',
+                name: 'Liked Songs',
+                tracks: tracks,
+                startIndex: 0,
+                shuffle: false
+            });
+
+            showInfo('Playing all liked songs');
+        } else {
+            showInfo('No liked songs to play');
+        }
+    } catch (error) {
+        console.error('Play all liked error:', error);
+        showError('Failed to play liked songs');
+    }
+}
+
+async function playAllPlaylist() {
+    if (!currentPlaylistId) {
+        showError('No playlist selected');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-playlist-tracks', currentPlaylistId);
+        if (result.success && result.data.length > 0) {
+            const enrichResult = await ipcRenderer.invoke('enrich-tracks', result.data);
+            const tracks = enrichResult.success ? enrichResult.data : result.data;
+
+            window.playContext({
+                type: 'playlist',
+                id: currentPlaylistId,
+                name: currentPlaylistName || 'Playlist',
+                tracks: tracks,
+                startIndex: 0,
+                shuffle: false
+            });
+
+            showInfo(`Playing ${currentPlaylistName || 'playlist'}`);
+        } else {
+            showInfo('No tracks in playlist to play');
+        }
+    } catch (error) {
+        console.error('Play all playlist error:', error);
+        showError('Failed to play playlist');
+    }
+}
+
+// Download All Functions
+async function downloadAllLiked() {
+    if (!backendReady) {
+        showError('Backend is still initializing...');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-liked');
+        if (result.success && result.data && result.data.length > 0) {
+            const tracks = result.data;
+            let addedCount = 0;
+            let skippedCount = 0;
+
+            for (const track of tracks) {
+                // Skip if already downloaded
+                if (track.downloaded || track.is_downloaded) {
+                    skippedCount++;
+                    continue;
+                }
+
+                try {
+                    const downloadResult = await ipcRenderer.invoke('download-track', {
+                        video_id: track.youtube_id,
+                        title: track.title,
+                        artist: track.artist_name || track.artist || track.uploader,
+                        duration: track.duration,
+                        quality: getDownloadQuality()
+                    });
+
+                    if (downloadResult.success) {
+                        addedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to download track: ${track.title}`, error);
+                }
+            }
+
+            if (addedCount > 0) {
+                showInfo(`Added ${addedCount} liked song(s) to download queue${skippedCount > 0 ? ` (${skippedCount} already downloaded)` : ''}`);
+            } else if (skippedCount > 0) {
+                showInfo('All liked songs are already downloaded');
+            } else {
+                showError('No tracks could be added to download queue');
+            }
+        } else {
+            showError('No liked songs to download');
+        }
+    } catch (error) {
+        console.error('Failed to download all liked:', error);
+        showError('Failed to download liked songs');
+    }
+}
+
+async function downloadAllPlaylist() {
+    if (!backendReady) {
+        showError('Backend is still initializing...');
+        return;
+    }
+
+    if (!currentPlaylistId) {
+        showError('No playlist selected');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-playlist-tracks', currentPlaylistId);
+        if (result.success && result.data && result.data.length > 0) {
+            const tracks = result.data;
+            let addedCount = 0;
+            let skippedCount = 0;
+
+            for (const track of tracks) {
+                // Skip if already downloaded
+                if (track.downloaded || track.is_downloaded) {
+                    skippedCount++;
+                    continue;
+                }
+
+                try {
+                    const downloadResult = await ipcRenderer.invoke('download-track', {
+                        video_id: track.youtube_id,
+                        title: track.title,
+                        artist: track.artist_name || track.artist || track.uploader,
+                        duration: track.duration,
+                        quality: getDownloadQuality()
+                    });
+
+                    if (downloadResult.success) {
+                        addedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to download track: ${track.title}`, error);
+                }
+            }
+
+            if (addedCount > 0) {
+                showInfo(`Added ${addedCount} track(s) from "${currentPlaylistName || 'playlist'}" to download queue${skippedCount > 0 ? ` (${skippedCount} already downloaded)` : ''}`);
+            } else if (skippedCount > 0) {
+                showInfo(`All tracks from "${currentPlaylistName || 'playlist'}" are already downloaded`);
+            } else {
+                showError('No tracks could be added to download queue');
+            }
+        } else {
+            showError('Playlist is empty or could not be loaded');
+        }
+    } catch (error) {
+        console.error('Failed to download playlist:', error);
+        showError('Failed to download playlist');
+    }
+}
+
+// View Context Menu Functions
+function showViewContextMenu(event, viewType) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Close all menus first
+    document.querySelectorAll('.context-menu').forEach(menu => {
+        menu.classList.remove('visible');
+    });
+    
+    let menuElement;
+
+    if (viewType === 'downloads') {
+        menuElement = document.getElementById('downloads-view-menu');
+    } else if (viewType === 'liked') {
+        menuElement = document.getElementById('liked-view-menu');
+    } else {
+        return;
+    }
+
+    // First show menu to calculate its dimensions
+    menuElement.classList.add('visible');
+
+    // Get menu dimensions
+    const menuWidth = menuElement.offsetWidth;
+    const menuHeight = menuElement.offsetHeight;
+
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calculate position
+    let left = event.pageX;
+    let top = event.pageY;
+
+    // Adjust if menu would go beyond right edge
+    if (left + menuWidth > viewportWidth) {
+        left = viewportWidth - menuWidth - 10;
+    }
+
+    // Adjust if menu would go beyond bottom edge
+    if (top + menuHeight > viewportHeight) {
+        top = viewportHeight - menuHeight - 10;
+    }
+
+    // Ensure menu stays within left and top boundaries
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+
+    menuElement.style.left = left + 'px';
+    menuElement.style.top = top + 'px';
+
+    // Store view type for handler
+    menuElement.dataset.viewType = viewType;
+
+    // Add click listener to menu items
+    const handleMenuClick = (e) => {
+        const action = e.target.dataset.action;
+        if (action) {
+            handleViewContextMenuAction(viewType, action);
+            menuElement.classList.remove('visible');
+        }
+    };
+
+    // Remove old listener if exists
+    menuElement.removeEventListener('click', menuElement._clickHandler);
+    menuElement._clickHandler = handleMenuClick;
+    menuElement.addEventListener('click', handleMenuClick);
+
+    // Close menu when clicking outside
+    const closeMenu = (e) => {
+        if (!menuElement.contains(e.target) && e.target !== event.target) {
+            menuElement.classList.remove('visible');
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+}
+
+function handleViewContextMenuAction(viewType, action) {
+    // Close the menu
+    document.getElementById('downloads-view-menu')?.classList.remove('visible');
+    document.getElementById('liked-view-menu')?.classList.remove('visible');
+    
+    if (viewType === 'downloads') {
+        if (action === 'play-all') {
+            playAllDownloads();
+        } else if (action === 'shuffle') {
+            shufflePlay('downloads');
+        } else if (action === 'remove-all') {
+            removeAllDownloads();
+        }
+    } else if (viewType === 'liked') {
+        if (action === 'play-all') {
+            playAllLiked();
+        } else if (action === 'shuffle') {
+            shufflePlay('liked');
+        } else if (action === 'download-all') {
+            downloadAllLiked();
+        } else if (action === 'unlike-all') {
+            removeAllLiked();
+        }
+    }
+}
+
+// Update updateNavigationState to handle 3-dot menu icons
+function updateNavigationState(view) {
+    const theme = getCurrentTheme();
+    const navItems = document.querySelectorAll('.nav-item');
+
+    // Update all nav items
+    navItems.forEach(n => {
+        n.classList.remove('active');
+        const icon = n.querySelector('.icon.theme-icon');
+        if (icon) {
+            const iconType = icon.dataset.icon;
+            // Inactive icons: Black for light theme, White for dark theme
+            const suffix = theme === 'light' ? 'Black' : 'White';
+            icon.src = `../public/${iconType}${suffix}.png`;
+        }
+
+        // Update 3-dot menu icon for inactive nav items
+        const menuBtn = n.querySelector('.nav-menu-btn img');
+        if (menuBtn) {
+            // Inactive: Black for light theme, White for dark theme
+            menuBtn.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+        }
+    });
+
+    // Activate the target nav item
+    const targetNavItem = document.querySelector(`[data-view="${view}"]`);
+    if (targetNavItem) {
+        targetNavItem.classList.add('active');
+
+        // Set active icon based on theme
+        const activeIcon = targetNavItem.querySelector('.icon.theme-icon');
+        if (activeIcon) {
+            const iconType = activeIcon.dataset.icon;
+            const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
+            activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
+        }
+
+        // Update 3-dot menu icon for active nav item
+        const activeMenuBtn = targetNavItem.querySelector('.nav-menu-btn img');
+        if (activeMenuBtn) {
+            // Active: White for light theme (black bg), Black for dark theme (white bg)
+            activeMenuBtn.src = theme === 'light' ? '../public/3dotWhite.png' : '../public/3dotBlack.png';
+        }
+    }
+
+    // Clear playlist selection
+    document.querySelectorAll('.playlist-item').forEach(p =>
+        p.classList.remove('active')
+    );
+}
 
 // Handle deletion checks from main process
 ipcRenderer.on('check-if-playing', (event, youtubeId) => {

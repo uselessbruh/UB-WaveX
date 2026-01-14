@@ -24,10 +24,16 @@
                 <a href="#" class="nav-item" data-view="downloads">
                     <img src="../public/downloadBlack.png" class="icon theme-icon" data-icon="download" alt="Downloads">
                     <span>Downloads</span>
+                    <button class="nav-menu-btn" data-view="downloads" title="Downloads options">
+                        <img src="../public/3dotBlack.png" alt="Menu">
+                    </button>
                 </a>
                 <a href="#" class="nav-item" data-view="liked">
                     <img src="../public/liked.png" class="icon liked-icon" alt="Liked Songs">
                     <span>Liked Songs</span>
+                    <button class="nav-menu-btn" data-view="liked" title="Liked Songs options">
+                        <img src="../public/3dotBlack.png" alt="Menu">
+                    </button>
                 </a>
             </nav>
 
@@ -83,15 +89,25 @@
                 <!-- Downloads View -->
                 <div id="view-downloads" class="view">
                     <div class="view-header">
-                        <div class="search-bar-center">
-                            <input type="text" id="downloads-search-input" placeholder="Search in downloads..." />
+                        <div class="view-header-content">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="downloads-search-input" placeholder="Search in downloads..." />
+                            </div>
+                            <div class="title-with-actions">
+                                <h2>Downloads</h2>
+                                <div class="title-actions">
+                                    <button class="btn-action" id="btn-play-all-downloads">
+                                        <img src="../public/playBlack.png" class="theme-icon" data-icon="play" alt="Play">
+                                        Play All
+                                    </button>
+                                    <button class="btn-action" id="btn-shuffle-downloads">
+                                        <img src="../public/shuffleBlack.png" class="theme-icon" data-icon="shuffle" alt="Shuffle">
+                                        Shuffle
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button id="btn-shuffle-downloads" class="btn-shuffle" title="Shuffle Play">
-                            <span>🔀</span>
-                            Shuffle
-                        </button>
                     </div>
-                    <h2>Downloaded Songs</h2>
                     <div id="downloads-list" class="track-list">
                         <div class="empty-state">
                             <p>No downloads yet</p>
@@ -102,15 +118,29 @@
                 <!-- Liked Songs View -->
                 <div id="view-liked" class="view">
                     <div class="view-header">
-                        <div class="search-bar-center">
-                            <input type="text" id="liked-search-input" placeholder="Search in liked songs..." />
+                        <div class="view-header-content">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="liked-search-input" placeholder="Search in liked songs..." />
+                            </div>
+                            <div class="title-with-actions">
+                                <h2>Liked Songs</h2>
+                                <div class="title-actions">
+                                    <button class="btn-action" id="btn-play-all-liked">
+                                        <img src="../public/playBlack.png" class="theme-icon" data-icon="play" alt="Play">
+                                        Play All
+                                    </button>
+                                    <button class="btn-action" id="btn-shuffle-liked">
+                                        <img src="../public/shuffleBlack.png" class="theme-icon" data-icon="shuffle" alt="Shuffle">
+                                        Shuffle
+                                    </button>
+                                    <button class="btn-action" id="btn-download-all-liked">
+                                        <img src="../public/downloadBlack.png" class="theme-icon" data-icon="download" alt="Download">
+                                        Download All
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button id="btn-shuffle-liked" class="btn-shuffle" title="Shuffle Play">
-                            <span>🔀</span>
-                            Shuffle
-                        </button>
                     </div>
-                    <h2>Liked Songs</h2>
                     <div id="liked-list" class="track-list">
                         <div class="empty-state">
                             <p>No liked songs yet</p>
@@ -200,20 +230,27 @@
                 <!-- Playlist View -->
                 <div id="view-playlist" class="view">
                     <div class="view-header">
-                        <div class="search-bar">
-                            <input type="text" id="playlist-search-input" placeholder="Search in playlist..." />
-                        </div>
-                        <button id="btn-shuffle-playlist" class="btn-shuffle" title="Shuffle Play">
-                            <span>🔀</span>
-                            Shuffle
-                        </button>
-                    </div>
-                    <div class="playlist-header">
-                        <h2 id="playlist-title">Playlist</h2>
-                        <div class="playlist-actions">
-                            <button class="btn-secondary" id="btn-download-playlist">Download All</button>
-                            <button class="btn-secondary" id="btn-rename-playlist">Rename</button>
-                            <button class="btn-danger" id="btn-delete-playlist">Delete</button>
+                        <div class="view-header-content">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="playlist-search-input" placeholder="Search in playlist..." />
+                            </div>
+                            <div class="title-with-actions">
+                                <h2 id="playlist-title">Playlist</h2>
+                                <div class="title-actions">
+                                    <button class="btn-action" id="btn-play-all-playlist">
+                                        <img src="../public/playBlack.png" class="theme-icon" data-icon="play" alt="Play">
+                                        Play All
+                                    </button>
+                                    <button class="btn-action" id="btn-shuffle-playlist">
+                                        <img src="../public/shuffleBlack.png" class="theme-icon" data-icon="shuffle" alt="Shuffle">
+                                        Shuffle
+                                    </button>
+                                    <button class="btn-action" id="btn-download-playlist">
+                                        <img src="../public/downloadBlack.png" class="theme-icon" data-icon="download" alt="Download">
+                                        Download All
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div id="playlist-tracks" class="track-list">
@@ -288,6 +325,23 @@
             <div class="context-menu-item" data-action="like">Like</div>
             <div class="context-menu-divider"></div>
             <div class="context-menu-item" data-action="add-to-playlist">Add to Playlist</div>
+        </div>
+
+        <!-- Downloads View Context Menu -->
+        <div id="downloads-view-menu" class="context-menu">
+            <div class="context-menu-item" data-action="play-all">Play All</div>
+            <div class="context-menu-item" data-action="shuffle">Shuffle</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="remove-all">Remove All Downloads</div>
+        </div>
+
+        <!-- Liked View Context Menu -->
+        <div id="liked-view-menu" class="context-menu">
+            <div class="context-menu-item" data-action="play-all">Play All</div>
+            <div class="context-menu-item" data-action="shuffle">Shuffle</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="download-all">Download All</div>
+            <div class="context-menu-item" data-action="unlike-all">Unlike All</div>
         </div>
 
         <audio id="audio-player" preload="auto"></audio>

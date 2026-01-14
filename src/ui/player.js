@@ -328,9 +328,9 @@ class AudioPlayer {
                 } else {
                     // Get stream URL
                     console.log('Fetching stream URL for:', track.youtube_id);
-                    window.appAPI.showLoading('Loading track...');
+                    this.showPlayButtonLoading();
                     const result = await window.ipcRenderer.invoke('get-stream-url', track.youtube_id);
-                    window.appAPI.hideLoading();
+                    this.hidePlayButtonLoading();
 
                     console.log('Stream URL result:', result);
 
@@ -460,6 +460,33 @@ class AudioPlayer {
         }, 100);
     }
 
+    showPlayButtonLoading() {
+        const playPauseBtn = document.getElementById('btn-play-pause');
+        if (!playPauseBtn) return;
+        
+        // Hide all images in the button
+        const imgs = playPauseBtn.querySelectorAll('img');
+        imgs.forEach(img => img.style.display = 'none');
+        
+        // Create and add spinner
+        const spinner = document.createElement('div');
+        spinner.className = 'play-button-loader';
+        playPauseBtn.appendChild(spinner);
+    }
+
+    hidePlayButtonLoading() {
+        const playPauseBtn = document.getElementById('btn-play-pause');
+        if (!playPauseBtn) return;
+        
+        // Remove spinner
+        const spinner = playPauseBtn.querySelector('.play-button-loader');
+        if (spinner) spinner.remove();
+        
+        // Show images again
+        const imgs = playPauseBtn.querySelectorAll('img');
+        imgs.forEach(img => img.style.display = 'block');
+    }
+
     updatePlaybackSourceUI() {
         // Update UI to show where music is playing from
         const sourceElement = document.getElementById('playback-source');
@@ -519,9 +546,9 @@ class AudioPlayer {
             if (!this.audio.src && this.currentTrack) {
                 try {
                     console.log('Loading stream URL for restored track:', this.currentTrack.youtube_id);
-                    window.appAPI.showLoading('Loading track...');
+                    this.showPlayButtonLoading();
                     const result = await window.ipcRenderer.invoke('get-stream-url', this.currentTrack.youtube_id);
-                    window.appAPI.hideLoading();
+                    this.hidePlayButtonLoading();
 
                     if (result.success) {
                         this.audio.src = result.data.url;
