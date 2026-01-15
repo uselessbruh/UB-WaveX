@@ -27,6 +27,14 @@ class MusicCore:
         self.cache_dir = appdata_roaming / 'cache'
         self.download_dir = Path(os.getenv('USERPROFILE')) / 'Music' / 'UB-WaveX'
         
+        # Download settings
+        self.download_settings = {
+            'autoDownload': False,
+            'concurrentDownloads': 3,
+            'embedMetadata': True
+        }
+        self.active_downloads = 0
+        
         # Set FFmpeg path (bundled with app)
         self.ffmpeg_path = self._get_ffmpeg_path()
         
@@ -146,68 +154,95 @@ class MusicCore:
     def download_track(self, video_id: str, track_data: Dict[str, Any]) -> Dict[str, Any]:
         """Download a track with metadata from YouTube"""
         try:
-            # Get quality setting (default to 320 if not provided)
-            quality = str(track_data.get('quality', '320'))
+            # Check concurrent download limit
+            if self.active_downloads >= self.download_settings['concurrentDownloads']:
+                return {
+                    'success': False,
+                    'error': 'Concurrent download limit reached. Please wait for active downloads to complete.'
+                }
             
-            # Determine codec and quality based on setting
-            if quality.lower() == 'flac':
-                codec = 'flac'
-                quality_value = '0'  # FLAC doesn't use bitrate
-            else:
-                codec = 'mp3'
-                quality_value = quality
+            self.active_downloads += 1
             
-            # Setup download options
-            output_template = str(self.download_dir / '%(title)s.%(ext)s')
-            
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': output_template,
-                'quiet': True,
-                'no_warnings': True,
-                'ffmpeg_location': self.ffmpeg_path,
-                'noprogress': True,
-                'postprocessors': [{
+            try:
+                # Get quality setting (default to 320 if not provided)
+                quality = str(track_data.get('quality', '320'))
+                
+                # Determine codec and quality based on setting
+                if quality.lower() == 'flac':
+                    codec = 'flac'
+                    quality_value = '0'  # FLAC doesn't use bitrate
+                else:
+                    codec = 'mp3'
+                    quality_value = quality
+                
+                # Setup download options
+                output_template = str(self.download_dir / '%(title)s.%(ext)s')
+                
+                # Base postprocessors
+                postprocessors = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': codec,
                     'preferredquality': quality_value,
-                }, {
-                    'key': 'FFmpegMetadata',
-                    'add_metadata': True,
-                }],
-            }
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
+                }]
                 
-                # Get the actual file path
-                file_path = ydl.prepare_filename(info)
-                file_path = file_path.rsplit('.', 1)[0] + '.mp3'
+                # Add metadata embedding if enabled
+                if self.download_settings['embedMetadata']:
+                    postprocessors.append({
+                        'key': 'FFmpegMetadata',
+                        'add_metadata': True,
+                    })
+                    # Add thumbnail embedding for album art
+                    postprocessors.append({
+                        'key': 'EmbedThumbnail',
+                        'already_have_thumbnail': False,
+                    })
                 
-                # Use YouTube data directly
-                title = info.get('title', track_data.get('title', 'Unknown'))
-                artist = info.get('uploader', track_data.get('uploader', 'Unknown Artist'))
-                duration = info.get('duration', track_data.get('duration', 0))
-                
-                # Save to database
-                metadata = {
-                    'title': title,
-                    'artist': artist,
-                    'duration': duration,
-                    'youtube_id': video_id
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': output_template,
+                    'quiet': True,
+                    'no_warnings': True,
+                    'ffmpeg_location': self.ffmpeg_path,
+                    'noprogress': True,
+                    'writethumbnail': self.download_settings['embedMetadata'],  # Download thumbnail for album art
+                    'postprocessors': postprocessors,
                 }
                 
-                track_id = self.save_track_to_db(video_id, metadata)
-                self.save_download_to_db(track_id, file_path)
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
+                    
+                    # Get the actual file path
+                    file_path = ydl.prepare_filename(info)
+                    file_path = file_path.rsplit('.', 1)[0] + f'.{codec}'
+                    
+                    # Use YouTube data directly
+                    title = info.get('title', track_data.get('title', 'Unknown'))
+                    artist = info.get('uploader', track_data.get('uploader', 'Unknown Artist'))
+                    duration = info.get('duration', track_data.get('duration', 0))
+                    
+                    # Save to database
+                    metadata = {
+                        'title': title,
+                        'artist': artist,
+                        'duration': duration,
+                        'youtube_id': video_id
+                    }
+                    
+                    track_id = self.save_track_to_db(video_id, metadata)
+                    self.save_download_to_db(track_id, file_path)
+                    
+                    return {
+                        'track_id': track_id,
+                        'file_path': file_path,
+                        'title': title,
+                        'artist': artist
+                    }
+            finally:
+                self.active_downloads -= 1
                 
-                return {
-                    'track_id': track_id,
-                    'file_path': file_path,
-                    'title': title,
-                    'artist': artist
-                }
         except Exception as e:
             self.log_error(f"Download failed: {str(e)}")
+            self.active_downloads = max(0, self.active_downloads - 1)
             raise
             
     def resolve_metadata(self, track_info: Dict[str, Any]) -> Dict[str, Any]:
@@ -547,6 +582,14 @@ class IPCHandler:
                     'download_dir': str(self.music_core.download_dir),
                     'db_path': str(self.music_core.db_path)
                 })
+            
+            elif action == 'update_download_settings':
+                # Update download settings from renderer
+                settings = params.get('settings', {})
+                self.music_core.download_settings.update(settings)
+                return self.success_response(request_id, {
+                    'settings': self.music_core.download_settings
+                })
                 
             else:
                 return self.error_response(request_id, f"Unknown action: {action}")
@@ -598,6 +641,17 @@ class IPCHandler:
                                 self.music_core.db_connection.close()
                             self.music_core.db_path = new_db_path
                             self.music_core.connect_database()
+                    elif command == 'update_download_settings':
+                        settings = request.get('settings', {})
+                        self.music_core.download_settings.update(settings)
+                    elif command == 'clear_cache':
+                        # Clear cache directory
+                        if self.music_core.cache_dir.exists():
+                            for file in self.music_core.cache_dir.glob('*'):
+                                try:
+                                    file.unlink()
+                                except Exception as e:
+                                    print(f"Failed to delete cache file {file}: {e}", file=sys.stderr)
                     continue
                 
                 response = self.handle_request(request)

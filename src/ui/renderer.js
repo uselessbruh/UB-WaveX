@@ -297,6 +297,36 @@ function setupEventListeners() {
         await resetDatabaseDirectory();
     });
 
+    // Manual directory input handling
+    const downloadDirInput = document.getElementById('download-directory-input');
+    const databaseDirInput = document.getElementById('database-directory-input');
+
+    downloadDirInput?.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            await handleManualDirectoryInput('download', downloadDirInput.value.trim());
+        }
+    });
+
+    downloadDirInput?.addEventListener('blur', async (e) => {
+        const newPath = e.target.value.trim();
+        if (newPath && newPath !== currentSettings.downloadDirectory) {
+            await handleManualDirectoryInput('download', newPath);
+        }
+    });
+
+    databaseDirInput?.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            await handleManualDirectoryInput('database', databaseDirInput.value.trim());
+        }
+    });
+
+    databaseDirInput?.addEventListener('blur', async (e) => {
+        const newPath = e.target.value.trim();
+        if (newPath && newPath !== currentSettings.databaseDirectory) {
+            await handleManualDirectoryInput('database', newPath);
+        }
+    });
+
     // Playback settings
     document.getElementById('toggle-autoplay')?.addEventListener('click', function () {
         this.classList.toggle('active');
@@ -330,12 +360,127 @@ function setupEventListeners() {
         savePlaybackSetting('crossfadeDuration', parseFloat(this.value));
     });
 
+    // Download settings
+    document.getElementById('toggle-auto-download')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveDownloadSetting('autoDownload', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-embed-metadata')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveDownloadSetting('embedMetadata', this.classList.contains('active'));
+    });
+
+    const concurrentDownloadsSlider = document.getElementById('concurrent-downloads-slider');
+    const concurrentDownloadsValue = document.getElementById('concurrent-downloads-value');
+    concurrentDownloadsSlider?.addEventListener('input', function () {
+        concurrentDownloadsValue.textContent = this.value;
+    });
+    concurrentDownloadsSlider?.addEventListener('change', function () {
+        saveDownloadSetting('concurrentDownloads', parseInt(this.value));
+    });
+
+    // Performance settings
+    const cacheSizeSlider = document.getElementById('cache-size-slider');
+    const cacheSizeValue = document.getElementById('cache-size-value');
+    cacheSizeSlider?.addEventListener('input', function () {
+        cacheSizeValue.textContent = this.value + ' MB';
+    });
+    cacheSizeSlider?.addEventListener('change', function () {
+        savePerformanceSetting('cacheSize', parseInt(this.value));
+    });
+
+    const bufferSizeSlider = document.getElementById('buffer-size-slider');
+    const bufferSizeValue = document.getElementById('buffer-size-value');
+    bufferSizeSlider?.addEventListener('input', function () {
+        bufferSizeValue.textContent = this.value + 's';
+    });
+    bufferSizeSlider?.addEventListener('change', function () {
+        savePerformanceSetting('bufferSize', parseInt(this.value));
+    });
+
+    const networkTimeoutSlider = document.getElementById('network-timeout-slider');
+    const networkTimeoutValue = document.getElementById('network-timeout-value');
+    networkTimeoutSlider?.addEventListener('input', function () {
+        networkTimeoutValue.textContent = this.value + 's';
+    });
+    networkTimeoutSlider?.addEventListener('change', function () {
+        savePerformanceSetting('networkTimeout', parseInt(this.value));
+    });
+
+    const maxResultsSlider = document.getElementById('max-results-slider');
+    const maxResultsValue = document.getElementById('max-results-value');
+    maxResultsSlider?.addEventListener('input', function () {
+        maxResultsValue.textContent = this.value;
+    });
+    maxResultsSlider?.addEventListener('change', function () {
+        savePerformanceSetting('maxSearchResults', parseInt(this.value));
+    });
+
+    // Privacy & Data settings
+    document.getElementById('btn-clear-cache')?.addEventListener('click', async function () {
+        if (await showModal('Clear Cache', 'Are you sure you want to clear all cached stream URLs and metadata?', 'confirm')) {
+            await clearCache();
+        }
+    });
+
+    document.getElementById('btn-clear-search-history')?.addEventListener('click', async function () {
+        if (await showModal('Clear Search History', 'Are you sure you want to clear all search history?', 'confirm')) {
+            clearSearchHistory();
+        }
+    });
+
+    document.getElementById('btn-clear-recent-plays')?.addEventListener('click', async function () {
+        if (await showModal('Clear Recent Plays', 'Are you sure you want to clear all playback history?', 'confirm')) {
+            await clearRecentPlays();
+        }
+    });
+
+    const autoClearSlider = document.getElementById('auto-clear-slider');
+    const autoClearValue = document.getElementById('auto-clear-value');
+    autoClearSlider?.addEventListener('input', function () {
+        autoClearValue.textContent = this.value == 0 ? 'Disabled' : this.value + ' days';
+    });
+    autoClearSlider?.addEventListener('change', function () {
+        savePrivacySetting('autoClearDays', parseInt(this.value));
+    });
+
+    // Notification settings
+    document.getElementById('toggle-download-notification')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveNotificationSetting('downloadNotification', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-download-error-notification')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveNotificationSetting('downloadErrorNotification', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-now-playing-notification')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveNotificationSetting('nowPlayingNotification', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-playback-error-notification')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveNotificationSetting('playbackErrorNotification', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-library-notification')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveNotificationSetting('libraryNotification', this.classList.contains('active'));
+    });
+
     // Load saved theme
     loadTheme();
     loadQuality();
     loadStreamQuality();
     loadDirectorySettings();
     loadPlaybackSettings();
+    loadDownloadSettings();
+    loadPerformanceSettings();
+    loadPrivacySettings();
+    loadNotificationSettings();
 
     // Context Menu
     document.addEventListener('click', () => {
@@ -466,8 +611,11 @@ async function performSearch() {
     searchResults.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
 
     try {
+        // Get max results from performance settings
+        const maxResults = performanceSettings.maxSearchResults || 20;
+        
         // Online search
-        const result = await ipcRenderer.invoke('search-music', query);
+        const result = await ipcRenderer.invoke('search-music', { query, limit: maxResults });
 
         console.log('Search results:', result);
 
@@ -955,6 +1103,16 @@ async function toggleLike(track) {
         if (result.success) {
             // Update UI
             track.liked = result.liked;
+
+            // If auto-download is enabled and track was just liked, download it
+            if (result.liked && downloadSettings.autoDownload) {
+                try {
+                    console.log('Auto-downloading liked track:', track.title);
+                    await handleDownload(track);
+                } catch (error) {
+                    console.error('Auto-download failed:', error);
+                }
+            }
 
             // Update the like button icon in all track items with this track
             document.querySelectorAll(`.track-item[data-youtube-id="${track.youtube_id}"]`).forEach(trackEl => {
@@ -2080,6 +2238,9 @@ function switchTheme(theme) {
         console.error('Failed to update app icon:', err);
     });
 
+    // Notify mini player of theme change
+    ipcRenderer.send('theme-changed', theme);
+
     // Save preference
     localStorage.setItem('theme', theme);
 }
@@ -2199,6 +2360,8 @@ function loadSearchHistory() {
 async function loadRecentPlays() {
     try {
         const result = await ipcRenderer.invoke('db-get-recent-plays');
+        
+        console.log('Recent plays result:', result);
 
         recentPlaysList.innerHTML = '';
 
@@ -2211,6 +2374,10 @@ async function loadRecentPlays() {
                 const cube = createRecentPlayCube(track);
                 recentPlaysList.appendChild(cube);
             });
+            
+            console.log('Recent plays loaded:', enrichedTracks.length, 'tracks');
+        } else {
+            console.log('No recent plays found');
         }
 
         updateSearchViewVisibility();
@@ -2254,14 +2421,35 @@ function createRecentPlayCube(track) {
     // Track info
     const title = document.createElement('div');
     title.className = 'cube-title';
-    title.textContent = track.title;
+    const titleInner = document.createElement('span');
+    titleInner.className = 'cube-title-inner';
+    titleInner.textContent = track.title;
+    title.appendChild(titleInner);
 
     const artist = document.createElement('div');
     artist.className = 'cube-artist';
-    artist.textContent = track.artist_name || track.artist || 'Unknown Artist';
+    const artistInner = document.createElement('span');
+    artistInner.className = 'cube-artist-inner';
+    artistInner.textContent = track.artist_name || track.artist || 'Unknown Artist';
+    artist.appendChild(artistInner);
 
     cube.appendChild(title);
     cube.appendChild(artist);
+    
+    // Check if marquee is needed after adding to DOM
+    setTimeout(() => {
+        if (titleInner.scrollWidth > title.clientWidth) {
+            titleInner.classList.add('marquee');
+            // Duplicate text for seamless loop
+            titleInner.textContent = track.title + ' • ' + track.title;
+        }
+        if (artistInner.scrollWidth > artist.clientWidth) {
+            artistInner.classList.add('marquee');
+            // Duplicate text for seamless loop
+            const artistText = track.artist_name || track.artist || 'Unknown Artist';
+            artistInner.textContent = artistText + ' • ' + artistText;
+        }
+    }, 0);
 
     // Click to play
     cube.onclick = () => {
@@ -2346,7 +2534,8 @@ window.appAPI = {
 window.renderer = {
     downloadTrack,
     toggleLike,
-    getStreamQuality
+    getStreamQuality,
+    loadRecentPlays
 };
 
 // Expose ipcRenderer for player.js
@@ -2837,6 +3026,74 @@ async function resetDatabaseDirectory() {
     }
 }
 
+// Handle manual directory input
+async function handleManualDirectoryInput(type, path) {
+    if (!path) {
+        showNotification('Please enter a valid directory path', 'error');
+        await loadDirectorySettings(); // Restore previous value
+        return;
+    }
+
+    try {
+        // Validate directory path
+        const result = await ipcRenderer.invoke('validate-directory', { path });
+
+        if (!result.success) {
+            // Directory doesn't exist, ask to create
+            showModal(
+                'Directory Not Found',
+                `Directory does not exist:\n${path}\n\nWould you like to create it?`,
+                'confirm',
+                async () => {
+                    // User clicked OK - create directory
+                    const createResult = await ipcRenderer.invoke('create-directory', { path });
+                    
+                    if (!createResult.success) {
+                        showNotification(`Failed to create directory: ${createResult.error}`, 'error');
+                        await loadDirectorySettings(); // Restore previous value
+                        return;
+                    }
+                    
+                    // Directory created successfully, update settings
+                    if (type === 'download') {
+                        currentSettings.downloadDirectory = path;
+                        await saveDirectorySettings();
+                        await loadDirectorySettings();
+                        showNotification('Download directory updated successfully');
+                    } else if (type === 'database') {
+                        currentSettings.databaseDirectory = path;
+                        await saveDirectorySettings();
+                        await loadDirectorySettings();
+                        showNotification('Database directory updated. Please restart the app for changes to take effect.', 'warning');
+                    }
+                },
+                async () => {
+                    // User clicked Cancel - restore previous value
+                    await loadDirectorySettings();
+                }
+            );
+            return;
+        }
+
+        // Update settings with the valid/created directory
+        if (type === 'download') {
+            currentSettings.downloadDirectory = path;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Download directory updated successfully');
+        } else if (type === 'database') {
+            currentSettings.databaseDirectory = path;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Database directory updated. Please restart the app for changes to take effect.', 'warning');
+        }
+    } catch (error) {
+        console.error('Failed to update directory:', error);
+        showNotification(`Failed to update directory: ${error.message}`, 'error');
+        await loadDirectorySettings(); // Restore previous value
+    }
+}
+
 // Save directory settings
 async function saveDirectorySettings() {
     try {
@@ -2855,9 +3112,10 @@ function showNotification(message, type = 'success') {
     // You can enhance this with a proper notification UI later
     console.log(`[${type.toUpperCase()}] ${message}`);
 
-    // For now, just show an alert for important messages
+    // For now, just show a modal for important messages
     if (type === 'warning' || type === 'error') {
-        alert(message);
+        const title = type === 'error' ? 'Error' : 'Warning';
+        showModal(title, message, 'alert');
     }
 }
 
@@ -2972,3 +3230,463 @@ function getPlaybackSettings() {
 
 // Make it globally accessible
 window.getPlaybackSettings = getPlaybackSettings;
+
+// ================================
+// Download Settings Management
+// ================================
+
+// Default download settings
+const defaultDownloadSettings = {
+    autoDownload: false,
+    concurrentDownloads: 3,
+    embedMetadata: true
+};
+
+let downloadSettings = { ...defaultDownloadSettings };
+
+// Load download settings from localStorage
+function loadDownloadSettings() {
+    try {
+        const saved = localStorage.getItem('downloadSettings');
+        if (saved) {
+            downloadSettings = { ...defaultDownloadSettings, ...JSON.parse(saved) };
+        }
+
+        // Update UI
+        const autoDownloadToggle = document.getElementById('toggle-auto-download');
+        if (autoDownloadToggle) {
+            if (downloadSettings.autoDownload) {
+                autoDownloadToggle.classList.add('active');
+            }
+        }
+
+        const embedMetadataToggle = document.getElementById('toggle-embed-metadata');
+        if (embedMetadataToggle) {
+            if (downloadSettings.embedMetadata) {
+                embedMetadataToggle.classList.add('active');
+            }
+        }
+
+        const concurrentSlider = document.getElementById('concurrent-downloads-slider');
+        const concurrentValue = document.getElementById('concurrent-downloads-value');
+        if (concurrentSlider && concurrentValue) {
+            concurrentSlider.value = downloadSettings.concurrentDownloads;
+            concurrentValue.textContent = downloadSettings.concurrentDownloads;
+        }
+
+        // Send settings to main process
+        ipcRenderer.invoke('update-download-settings', downloadSettings).catch(err => {
+            console.error('Failed to update download settings:', err);
+        });
+    } catch (error) {
+        console.error('Failed to load download settings:', error);
+    }
+}
+
+// Save individual download setting
+function saveDownloadSetting(key, value) {
+    try {
+        downloadSettings[key] = value;
+        localStorage.setItem('downloadSettings', JSON.stringify(downloadSettings));
+        console.log(`Download setting saved: ${key} = ${value}`);
+        
+        // Send updated settings to main process
+        ipcRenderer.invoke('update-download-settings', downloadSettings).catch(err => {
+            console.error('Failed to update download settings:', err);
+        });
+    } catch (error) {
+        console.error('Failed to save download setting:', error);
+    }
+}
+
+// Export download settings
+function getDownloadSettings() {
+    return downloadSettings;
+}
+
+// Make it globally accessible
+window.getDownloadSettings = getDownloadSettings;
+
+// ================================
+// Performance Settings Management
+// ================================
+
+// Default performance settings
+const defaultPerformanceSettings = {
+    cacheSize: 200,
+    bufferSize: 10,
+    networkTimeout: 30,
+    maxSearchResults: 20
+};
+
+let performanceSettings = { ...defaultPerformanceSettings };
+
+// Load performance settings from localStorage
+function loadPerformanceSettings() {
+    try {
+        const saved = localStorage.getItem('performanceSettings');
+        if (saved) {
+            performanceSettings = { ...defaultPerformanceSettings, ...JSON.parse(saved) };
+        }
+
+        // Update UI
+        const cacheSizeSlider = document.getElementById('cache-size-slider');
+        const cacheSizeValue = document.getElementById('cache-size-value');
+        if (cacheSizeSlider && cacheSizeValue) {
+            cacheSizeSlider.value = performanceSettings.cacheSize;
+            cacheSizeValue.textContent = performanceSettings.cacheSize + ' MB';
+        }
+
+        const bufferSizeSlider = document.getElementById('buffer-size-slider');
+        const bufferSizeValue = document.getElementById('buffer-size-value');
+        if (bufferSizeSlider && bufferSizeValue) {
+            bufferSizeSlider.value = performanceSettings.bufferSize;
+            bufferSizeValue.textContent = performanceSettings.bufferSize + 's';
+        }
+
+        const networkTimeoutSlider = document.getElementById('network-timeout-slider');
+        const networkTimeoutValue = document.getElementById('network-timeout-value');
+        if (networkTimeoutSlider && networkTimeoutValue) {
+            networkTimeoutSlider.value = performanceSettings.networkTimeout;
+            networkTimeoutValue.textContent = performanceSettings.networkTimeout + 's';
+        }
+
+        const maxResultsSlider = document.getElementById('max-results-slider');
+        const maxResultsValue = document.getElementById('max-results-value');
+        if (maxResultsSlider && maxResultsValue) {
+            maxResultsSlider.value = performanceSettings.maxSearchResults;
+            maxResultsValue.textContent = performanceSettings.maxSearchResults;
+        }
+    } catch (error) {
+        console.error('Failed to load performance settings:', error);
+    }
+}
+
+// Save individual performance setting
+function savePerformanceSetting(key, value) {
+    try {
+        performanceSettings[key] = value;
+        localStorage.setItem('performanceSettings', JSON.stringify(performanceSettings));
+        console.log(`Performance setting saved: ${key} = ${value}`);
+    } catch (error) {
+        console.error('Failed to save performance setting:', error);
+    }
+}
+
+// Export performance settings
+function getPerformanceSettings() {
+    return performanceSettings;
+}
+
+// Make it globally accessible
+window.getPerformanceSettings = getPerformanceSettings;
+
+// ================================
+// Privacy & Data Settings Management
+// ================================
+
+// Default privacy settings
+const defaultPrivacySettings = {
+    autoClearDays: 0
+};
+
+let privacySettings = { ...defaultPrivacySettings };
+
+// Load privacy settings from localStorage
+function loadPrivacySettings() {
+    try {
+        const saved = localStorage.getItem('privacySettings');
+        if (saved) {
+            privacySettings = { ...defaultPrivacySettings, ...JSON.parse(saved) };
+        }
+
+        // Update UI
+        const autoClearSlider = document.getElementById('auto-clear-slider');
+        const autoClearValue = document.getElementById('auto-clear-value');
+        if (autoClearSlider && autoClearValue) {
+            autoClearSlider.value = privacySettings.autoClearDays;
+            autoClearValue.textContent = privacySettings.autoClearDays == 0 ? 'Disabled' : privacySettings.autoClearDays + ' days';
+        }
+
+        // Check if auto-clear should run
+        checkAutoClearHistory();
+    } catch (error) {
+        console.error('Failed to load privacy settings:', error);
+    }
+}
+
+// Save individual privacy setting
+function savePrivacySetting(key, value) {
+    try {
+        privacySettings[key] = value;
+        localStorage.setItem('privacySettings', JSON.stringify(privacySettings));
+        console.log(`Privacy setting saved: ${key} = ${value}`);
+    } catch (error) {
+        console.error('Failed to save privacy setting:', error);
+    }
+}
+
+// Clear cache
+async function clearCache() {
+    try {
+        // Clear Python cache
+        await ipcRenderer.invoke('clear-cache');
+        
+        // Clear localStorage cache-related items (if any)
+        // Refresh the UI
+        showModal('Success', 'Cache cleared successfully!', 'alert');
+    } catch (error) {
+        console.error('Failed to clear cache:', error);
+        showModal('Error', 'Failed to clear cache: ' + error.message, 'alert');
+    }
+}
+
+// Clear search history
+function clearSearchHistory() {
+    try {
+        localStorage.removeItem('searchHistory');
+        loadSearchHistory();
+        showModal('Success', 'Search history cleared successfully!', 'alert');
+    } catch (error) {
+        console.error('Failed to clear search history:', error);
+        showModal('Error', 'Failed to clear search history: ' + error.message, 'alert');
+    }
+}
+
+// Clear recent plays
+async function clearRecentPlays() {
+    try {
+        await ipcRenderer.invoke('db-clear-playback-history');
+        await loadRecentPlays();
+        showModal('Success', 'Recent plays cleared successfully!', 'alert');
+    } catch (error) {
+        console.error('Failed to clear recent plays:', error);
+        showModal('Error', 'Failed to clear recent plays: ' + error.message, 'alert');
+    }
+}
+
+// Check and auto-clear history if needed
+function checkAutoClearHistory() {
+    if (privacySettings.autoClearDays === 0) return;
+
+    try {
+        const lastClearDate = localStorage.getItem('lastAutoClearDate');
+        const now = Date.now();
+        const daysSinceLastClear = lastClearDate 
+            ? (now - parseInt(lastClearDate)) / (1000 * 60 * 60 * 24)
+            : privacySettings.autoClearDays + 1; // Force clear if never cleared
+
+        if (daysSinceLastClear >= privacySettings.autoClearDays) {
+            // Auto-clear search history
+            const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            const cutoffDate = now - (privacySettings.autoClearDays * 24 * 60 * 60 * 1000);
+            const filteredHistory = history.filter(item => {
+                return item.timestamp && item.timestamp > cutoffDate;
+            });
+            localStorage.setItem('searchHistory', JSON.stringify(filteredHistory));
+
+            // Auto-clear old playback history
+            ipcRenderer.invoke('db-clear-old-playback-history', privacySettings.autoClearDays);
+
+            // Update last clear date
+            localStorage.setItem('lastAutoClearDate', now.toString());
+            console.log('Auto-cleared history older than', privacySettings.autoClearDays, 'days');
+        }
+    } catch (error) {
+        console.error('Failed to auto-clear history:', error);
+    }
+}
+
+// Export privacy settings
+function getPrivacySettings() {
+    return privacySettings;
+}
+
+// Make it globally accessible
+window.getPrivacySettings = getPrivacySettings;
+
+// ================================
+// Notification Settings
+// ================================
+
+const defaultNotificationSettings = {
+    downloadNotification: true,
+    downloadErrorNotification: true,
+    nowPlayingNotification: false,
+    playbackErrorNotification: true,
+    libraryNotification: false
+};
+
+let notificationSettings = { ...defaultNotificationSettings };
+
+function loadNotificationSettings() {
+    try {
+        const saved = localStorage.getItem('notificationSettings');
+        if (saved) {
+            notificationSettings = { ...defaultNotificationSettings, ...JSON.parse(saved) };
+        }
+
+        const downloadNotifToggle = document.getElementById('toggle-download-notification');
+        const downloadErrorToggle = document.getElementById('toggle-download-error-notification');
+        const nowPlayingToggle = document.getElementById('toggle-now-playing-notification');
+        const playbackErrorToggle = document.getElementById('toggle-playback-error-notification');
+        const libraryToggle = document.getElementById('toggle-library-notification');
+
+        if (downloadNotifToggle) {
+            if (notificationSettings.downloadNotification) {
+                downloadNotifToggle.classList.add('active');
+            } else {
+                downloadNotifToggle.classList.remove('active');
+            }
+        }
+
+        if (downloadErrorToggle) {
+            if (notificationSettings.downloadErrorNotification) {
+                downloadErrorToggle.classList.add('active');
+            } else {
+                downloadErrorToggle.classList.remove('active');
+            }
+        }
+
+        if (nowPlayingToggle) {
+            if (notificationSettings.nowPlayingNotification) {
+                nowPlayingToggle.classList.add('active');
+            } else {
+                nowPlayingToggle.classList.remove('active');
+            }
+        }
+
+        if (playbackErrorToggle) {
+            if (notificationSettings.playbackErrorNotification) {
+                playbackErrorToggle.classList.add('active');
+            } else {
+                playbackErrorToggle.classList.remove('active');
+            }
+        }
+
+        if (libraryToggle) {
+            if (notificationSettings.libraryNotification) {
+                libraryToggle.classList.add('active');
+            } else {
+                libraryToggle.classList.remove('active');
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load notification settings:', error);
+    }
+}
+
+function saveNotificationSetting(key, value) {
+    notificationSettings[key] = value;
+    localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+}
+
+function showNotification(title, body) {
+    if (!("Notification" in window)) {
+        console.log("This browser does not support desktop notifications");
+        return;
+    }
+
+    if (Notification.permission === "granted") {
+        new Notification(title, { body, icon: '../image/icon.png' });
+    } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification(title, { body, icon: '../image/icon.png' });
+            }
+        });
+    }
+}
+
+function getNotificationSettings() {
+    return notificationSettings;
+}
+
+window.getNotificationSettings = getNotificationSettings;
+window.showNotification = showNotification;
+
+// ================================
+// Themed Modal Dialog
+// ================================
+
+function showModal(title, message, type = 'alert', onConfirm = null, onCancel = null) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const cancelBtn = document.getElementById('modal-cancel');
+        const confirmBtn = document.getElementById('modal-confirm');
+
+        // Set content
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+
+        // Configure buttons based on type
+        if (type === 'alert') {
+            cancelBtn.style.display = 'none';
+            confirmBtn.textContent = 'OK';
+            confirmBtn.className = 'btn-modal btn-confirm';
+        } else if (type === 'confirm') {
+            cancelBtn.style.display = 'block';
+            cancelBtn.textContent = 'Cancel';
+            confirmBtn.textContent = 'OK';
+            confirmBtn.className = 'btn-modal btn-confirm';
+        } else if (type === 'danger') {
+            cancelBtn.style.display = 'block';
+            cancelBtn.textContent = 'Cancel';
+            confirmBtn.textContent = 'Delete';
+            confirmBtn.className = 'btn-modal btn-confirm btn-danger';
+        }
+
+        // Remove old event listeners by cloning
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        // Add new event listeners
+        newConfirmBtn.addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            if (onConfirm) onConfirm();
+            resolve(true);
+        });
+
+        newCancelBtn.addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            if (onCancel) onCancel();
+            resolve(false);
+        });
+
+        // Close on overlay click
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('visible');
+                if (onCancel) onCancel();
+                resolve(false);
+            }
+        };
+
+        // Close on Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                overlay.classList.remove('visible');
+                if (onCancel) onCancel();
+                document.removeEventListener('keydown', escapeHandler);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        // Show modal
+        overlay.classList.add('visible');
+        
+        // Focus appropriate button
+        setTimeout(() => {
+            if (type === 'alert') {
+                newConfirmBtn.focus();
+            } else {
+                newCancelBtn.focus();
+            }
+        }, 100);
+    });
+}

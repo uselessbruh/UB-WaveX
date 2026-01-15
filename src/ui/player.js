@@ -116,6 +116,12 @@ class AudioPlayer {
             btnVolume.addEventListener('click', () => this.toggleMute());
         }
 
+        // Mini player button
+        const btnMiniPlayer = document.getElementById('btn-mini-player');
+        if (btnMiniPlayer) {
+            btnMiniPlayer.addEventListener('click', () => this.toggleMiniPlayer());
+        }
+
         // Seek
         this.seekBar.addEventListener('input', (e) => {
             const time = (e.target.value / 100) * this.audio.duration;
@@ -153,6 +159,10 @@ class AudioPlayer {
         // Audio events
         this.audio.addEventListener('timeupdate', () => {
             this.updateProgress();
+            // Send updates to mini player
+            if (this.miniPlayerOpen) {
+                this.sendMiniPlayerUpdate();
+            }
             // Save state periodically (every 2 seconds)
             if (!this.saveStateTimeout) {
                 this.saveStateTimeout = setTimeout(() => {
@@ -162,10 +172,25 @@ class AudioPlayer {
             }
         });
         this.audio.addEventListener('ended', () => this.onTrackEnded());
-        this.audio.addEventListener('play', () => this.onPlay());
-        this.audio.addEventListener('pause', () => this.onPause());
+        this.audio.addEventListener('play', () => {
+            this.onPlay();
+            if (this.miniPlayerOpen) {
+                this.sendMiniPlayerUpdate();
+            }
+        });
+        this.audio.addEventListener('pause', () => {
+            this.onPause();
+            if (this.miniPlayerOpen) {
+                this.sendMiniPlayerUpdate();
+            }
+        });
         this.audio.addEventListener('error', (e) => this.onError(e));
-        this.audio.addEventListener('loadedmetadata', () => this.onMetadataLoaded());
+        this.audio.addEventListener('loadedmetadata', () => {
+            this.onMetadataLoaded();
+            if (this.miniPlayerOpen) {
+                this.sendMiniPlayerUpdate();
+            }
+        });
 
         // Crossfade logic - start fading out before track ends
         this.audio.addEventListener('timeupdate', () => {
@@ -336,6 +361,8 @@ class AudioPlayer {
         try {
             console.log('Loading track:', track);
             this.currentTrack = track;
+            this.trackStartTime = Date.now();
+            this.playbackRecorded = false;
             this.updatePlayerUI(track);
 
             // Check if track is downloaded
@@ -650,6 +677,50 @@ class AudioPlayer {
             this.audio.currentTime = 0;
         }
     }
+    
+    hasNext() {
+        // Check if there are more tracks to play
+        return this.temporaryQueue.length > 0 || this.contextQueueIndex < this.contextQueue.length - 1;
+    }
+    
+    hasPrevious() {
+        // Check if we can go back
+        return this.contextQueueIndex > 0 || this.audio.currentTime > 3;
+    }
+
+    toggleMiniPlayer() {
+        const { ipcRenderer } = require('electron');
+        const btnMiniPlayer = document.getElementById('btn-mini-player');
+        
+        if (this.miniPlayerOpen) {
+            ipcRenderer.send('close-mini-player');
+            btnMiniPlayer.classList.remove('active');
+            this.miniPlayerOpen = false;
+        } else {
+            ipcRenderer.send('open-mini-player');
+            btnMiniPlayer.classList.add('active');
+            this.miniPlayerOpen = true;
+            this.sendMiniPlayerUpdate();
+        }
+    }
+
+    sendMiniPlayerUpdate() {
+        const { ipcRenderer } = require('electron');
+        
+        const data = {
+            track: this.currentTrack ? {
+                title: this.currentTrack.title,
+                artist: this.currentTrack.artist,
+                thumbnail: this.currentTrack.thumbnail
+            } : null,
+            isPlaying: !this.audio.paused,
+            currentTime: this.audio.currentTime,
+            duration: this.audio.duration,
+            progress: this.audio.duration ? (this.audio.currentTime / this.audio.duration) * 100 : 0
+        };
+
+        ipcRenderer.send('update-mini-player', data);
+    }
 
     addToQueue(track, playNext = false) {
         // Spotify-style queue logic:
@@ -732,6 +803,12 @@ class AudioPlayer {
             playPauseIcon.dataset.icon = 'pause';
             playPauseIcon.alt = 'Pause';
         }
+        
+        // Record playback start
+        if (this.currentTrack && this.currentTrack.id && !this.playbackRecorded) {
+            this.recordPlayback(false);
+            this.playbackRecorded = true;
+        }
     }
 
     onPause() {
@@ -747,6 +824,14 @@ class AudioPlayer {
     }
 
     async onTrackEnded() {
+        // Record completed playback
+        if (this.currentTrack && this.currentTrack.id) {
+            await this.recordPlayback(true);
+        }
+        
+        // Reset playback tracking
+        this.playbackRecorded = false;
+        
         // Auto-play next track based on Spotify queue logic
         if (this.playbackContext.type === 'online' && this.temporaryQueue.length === 0) {
             // Single track from search with no queued tracks - don't auto-play
@@ -892,6 +977,38 @@ class AudioPlayer {
             console.log('Saved playback state:', state);
         }
     }
+    
+    async recordPlayback(completed = false) {
+        if (!this.currentTrack || !this.currentTrack.id) {
+            console.log('Cannot record playback: no track or track ID');
+            return;
+        }
+        
+        try {
+            const playDuration = this.trackStartTime ? Math.floor((Date.now() - this.trackStartTime) / 1000) : 0;
+            console.log('Recording playback:', {
+                trackId: this.currentTrack.id,
+                title: this.currentTrack.title,
+                playDuration: playDuration,
+                completed: completed
+            });
+            
+            await window.ipcRenderer.invoke('db-record-playback', {
+                trackId: this.currentTrack.id,
+                playDuration: playDuration,
+                completed: completed
+            });
+            
+            console.log('Playback recorded successfully');
+            
+            // Refresh recent plays in UI if on search view
+            if (window.renderer && typeof window.renderer.loadRecentPlays === 'function') {
+                await window.renderer.loadRecentPlays();
+            }
+        } catch (error) {
+            console.error('Failed to record playback:', error);
+        }
+    }
 
     // Load and restore playback state
     async loadPlaybackState() {
@@ -973,14 +1090,67 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         player = new AudioPlayer();
         exposePlayerFunctions();
+        setupMiniPlayerListeners();
         // Restore last playback state
         setTimeout(() => player.loadPlaybackState(), 1000);
     });
 } else {
     player = new AudioPlayer();
     exposePlayerFunctions();
+    setupMiniPlayerListeners();
     // Restore last playback state
     setTimeout(() => player.loadPlaybackState(), 1000);
+}
+
+function setupMiniPlayerListeners() {
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('mini-player-action', (event, action, ...args) => {
+        if (!player) return;
+
+        switch (action) {
+            case 'play-pause':
+                player.togglePlayPause();
+                break;
+            case 'next':
+                player.playNext();
+                break;
+            case 'previous':
+                player.playPrevious();
+                break;
+            case 'seek':
+                const percent = args[0];
+                if (player.audio.duration) {
+                    player.audio.currentTime = (percent / 100) * player.audio.duration;
+                }
+                break;
+            case 'close':
+                const btnMini = document.getElementById('btn-mini-player');
+                if (btnMini) {
+                    btnMini.classList.remove('active');
+                }
+                if (player) {
+                    player.miniPlayerOpen = false;
+                }
+                break;
+        }
+    });
+
+    ipcRenderer.on('mini-player-request-state', () => {
+        if (player) {
+            player.sendMiniPlayerUpdate();
+        }
+    });
+
+    ipcRenderer.on('mini-player-closed', () => {
+        const btnMiniPlayer = document.getElementById('btn-mini-player');
+        if (btnMiniPlayer) {
+            btnMiniPlayer.classList.remove('active');
+        }
+        if (player) {
+            player.miniPlayerOpen = false;
+        }
+    });
 }
 
 function exposePlayerFunctions() {

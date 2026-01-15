@@ -5,6 +5,7 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 
 let mainWindow;
+let miniPlayerWindow = null;
 let pythonProcess;
 let db;
 
@@ -272,9 +273,13 @@ function sendPythonRequest(action, params = {}) {
 // IPC Handlers for renderer process
 
 // Search for music
-ipcMain.handle('search-music', async (event, query) => {
+ipcMain.handle('search-music', async (event, params) => {
   try {
-    const results = await sendPythonRequest('search', { query });
+    // Handle both old string format and new object format
+    const query = typeof params === 'string' ? params : params.query;
+    const limit = typeof params === 'object' ? params.limit : 20;
+    
+    const results = await sendPythonRequest('search', { query, limit });
     return { success: true, data: results };
   } catch (error) {
     return { success: false, error: error.message };
@@ -879,6 +884,62 @@ ipcMain.handle('db-get-recent-plays', async () => {
   }
 });
 
+// Record playback history
+ipcMain.handle('db-record-playback', async (event, { trackId, playDuration, completed }) => {
+  try {
+    db.run(
+      'INSERT INTO playback_history (track_id, play_duration, completed) VALUES (?, ?, ?)',
+      [trackId, playDuration || 0, completed ? 1 : 0]
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to record playback:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Clear playback history
+ipcMain.handle('db-clear-playback-history', async () => {
+  try {
+    db.run('DELETE FROM playback_history');
+    saveDatabase();
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to clear playback history:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Clear old playback history
+ipcMain.handle('db-clear-old-playback-history', async (event, days) => {
+  try {
+    const cutoffDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
+    db.run('DELETE FROM playback_history WHERE played_at < ?', [cutoffDate]);
+    saveDatabase();
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to clear old playback history:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Clear cache
+ipcMain.handle('clear-cache', async () => {
+  try {
+    // Send clear cache command to Python
+    if (pythonProcess && !pythonProcess.killed) {
+      const command = {
+        command: 'clear_cache'
+      };
+      pythonProcess.stdin.write(JSON.stringify(command) + '\n');
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to clear cache:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Toggle like status
 ipcMain.handle('db-toggle-like', async (event, trackId) => {
   try {
@@ -1140,6 +1201,170 @@ ipcMain.handle('update-settings', async (event, settings) => {
   }
 });
 
+// Validate if directory exists
+ipcMain.handle('validate-directory', async (event, { path: dirPath }) => {
+  try {
+    if (!dirPath) {
+      return { success: false, error: 'No path provided' };
+    }
+
+    const exists = fs.existsSync(dirPath);
+    return { success: exists, exists };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Create directory
+ipcMain.handle('create-directory', async (event, { path: dirPath }) => {
+  try {
+    if (!dirPath) {
+      return { success: false, error: 'No path provided' };
+    }
+
+    // Create directory recursively
+    fs.mkdirSync(dirPath, { recursive: true });
+    
+    // Verify it was created
+    if (fs.existsSync(dirPath)) {
+      return { success: true };
+    } else {
+      return { success: false, error: 'Directory creation failed' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Update download settings
+ipcMain.handle('update-download-settings', async (event, settings) => {
+  try {
+    // Send settings to Python process
+    if (pythonProcess && !pythonProcess.killed) {
+      const command = {
+        command: 'update_download_settings',
+        settings: settings
+      };
+      pythonProcess.stdin.write(JSON.stringify(command) + '\n');
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update download settings:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ================================
+// Mini Player Window Management
+// ================================
+
+function createMiniPlayer() {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.focus();
+    return;
+  }
+
+  miniPlayerWindow = new BrowserWindow({
+    width: 320,
+    height: 160,
+    frame: false,
+    transparent: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    backgroundColor: '#0d0d0d',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  miniPlayerWindow.loadFile(path.join(__dirname, '../ui/miniplayer.html'));
+
+  miniPlayerWindow.on('closed', () => {
+    miniPlayerWindow = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('mini-player-closed');
+    }
+  });
+}
+
+function closeMiniPlayer() {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.close();
+    miniPlayerWindow = null;
+  }
+}
+
+function updateMiniPlayer(data) {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.webContents.send('mini-player-update', data);
+  }
+}
+
+// IPC handlers for mini player
+ipcMain.on('open-mini-player', () => {
+  createMiniPlayer();
+  // Hide main window when mini player opens
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+  }
+});
+
+ipcMain.on('close-mini-player', () => {
+  closeMiniPlayer();
+  // Show main window when mini player closes
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+ipcMain.on('update-mini-player', (event, data) => {
+  updateMiniPlayer(data);
+});
+
+ipcMain.on('mini-player-action', (event, action, ...args) => {
+  if (action === 'expand') {
+    // If main window doesn't exist or is destroyed, recreate it
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    // Close mini player
+    closeMiniPlayer();
+    return;
+  }
+  
+  // For other actions, send to main window
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mini-player-action', action, ...args);
+  }
+});
+
+ipcMain.on('mini-player-ready', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mini-player-request-state');
+  }
+});
+
+ipcMain.on('focus-main-window', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+  } else {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+ipcMain.on('theme-changed', (event, theme) => {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.webContents.send('theme-changed', theme);
+  }
+});
+
 // App lifecycle
 app.whenReady().then(createWindow);
 
@@ -1157,6 +1382,9 @@ app.on('activate', () => {
 
 app.on('quit', () => {
   // Cleanup
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.close();
+  }
   if (pythonProcess) {
     pythonProcess.kill();
   }
