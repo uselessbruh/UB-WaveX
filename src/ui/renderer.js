@@ -298,22 +298,22 @@ function setupEventListeners() {
     });
 
     // Playback settings
-    document.getElementById('toggle-autoplay')?.addEventListener('click', function() {
+    document.getElementById('toggle-autoplay')?.addEventListener('click', function () {
         this.classList.toggle('active');
         savePlaybackSetting('autoplay', this.classList.contains('active'));
     });
 
-    document.getElementById('toggle-gapless')?.addEventListener('click', function() {
+    document.getElementById('toggle-gapless')?.addEventListener('click', function () {
         this.classList.toggle('active');
         savePlaybackSetting('gapless', this.classList.contains('active'));
     });
 
     const volumeSlider = document.getElementById('volume-slider');
     const volumeValue = document.getElementById('volume-value');
-    volumeSlider?.addEventListener('input', function() {
+    volumeSlider?.addEventListener('input', function () {
         volumeValue.textContent = this.value + '%';
     });
-    volumeSlider?.addEventListener('change', function() {
+    volumeSlider?.addEventListener('change', function () {
         savePlaybackSetting('defaultVolume', parseInt(this.value));
         // Update current player volume if playing
         if (window.player && window.player.audio) {
@@ -323,10 +323,10 @@ function setupEventListeners() {
 
     const crossfadeSlider = document.getElementById('crossfade-slider');
     const crossfadeValue = document.getElementById('crossfade-value');
-    crossfadeSlider?.addEventListener('input', function() {
+    crossfadeSlider?.addEventListener('input', function () {
         crossfadeValue.textContent = this.value + 's';
     });
-    crossfadeSlider?.addEventListener('change', function() {
+    crossfadeSlider?.addEventListener('change', function () {
         savePlaybackSetting('crossfadeDuration', parseFloat(this.value));
     });
 

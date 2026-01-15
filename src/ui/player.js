@@ -172,7 +172,7 @@ class AudioPlayer {
             if (this.currentTrack && this.hasNext()) {
                 const settings = window.getPlaybackSettings?.() || {};
                 const crossfadeDuration = settings.crossfadeDuration || 0;
-                
+
                 if (crossfadeDuration > 0) {
                     const timeLeft = this.audio.duration - this.audio.currentTime;
                     if (timeLeft <= crossfadeDuration && timeLeft > 0) {
