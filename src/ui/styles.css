@@ -1430,7 +1430,8 @@ body {
     cursor: default;
 }
 
-.btn-browse, .btn-reset {
+.btn-browse,
+.btn-reset {
     padding: 10px 18px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -1443,7 +1444,8 @@ body {
     white-space: nowrap;
 }
 
-.btn-browse:hover, .btn-reset:hover {
+.btn-browse:hover,
+.btn-reset:hover {
     background-color: var(--accent-primary);
     border-color: var(--accent-primary);
     color: var(--bg-primary);

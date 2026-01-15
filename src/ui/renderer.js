@@ -2820,7 +2820,7 @@ async function saveDirectorySettings() {
 function showNotification(message, type = 'success') {
     // You can enhance this with a proper notification UI later
     console.log(`[${type.toUpperCase()}] ${message}`);
-    
+
     // For now, just show an alert for important messages
     if (type === 'warning' || type === 'error') {
         alert(message);
