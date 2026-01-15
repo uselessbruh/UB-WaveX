@@ -93,36 +93,16 @@ body {
 }
 
 .mini-close-btn:hover {
-    background: rgba(255, 77, 77, 0.8);
-    color: #fff;
-    transform: scale(1.1);
+    background: var(--mini-btn-hover);
+    transform: scale(1.05);
 }
 
 .mini-track-info {
     display: flex;
     gap: 10px;
-    padding: 6px 10px;
+    padding: 8px 12px;
     align-items: center;
     background: var(--mini-bg-secondary);
-}
-
-.mini-thumbnail {
-    width: 50px;
-    height: 50px;
-    border-radius: 6px;
-    object-fit: cover;
-    background: var(--mini-thumbnail-bg);
-    flex-shrink: 0;
-    display: block;
-}
-
-.mini-thumbnail[src=""],
-.mini-thumbnail:not([src]) {
-    display: none;
-}
-
-.mini-thumbnail.hidden {
-    display: none;
 }
 
 .mini-text-info {

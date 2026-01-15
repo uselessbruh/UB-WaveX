@@ -1258,21 +1258,57 @@ ipcMain.handle('update-download-settings', async (event, settings) => {
 // Mini Player Window Management
 // ================================
 
-function createMiniPlayer() {
+// Get mini player position coordinates based on setting
+function getMiniPlayerPosition(position, width, height) {
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { workArea } = primaryDisplay;
+  const margin = 20;
+
+  switch (position) {
+    case 'top-left':
+      return { x: workArea.x + margin, y: workArea.y + margin };
+    case 'top-right':
+      return { x: workArea.x + workArea.width - width - margin, y: workArea.y + margin };
+    case 'middle':
+      return { 
+        x: workArea.x + Math.round((workArea.width - width) / 2), 
+        y: workArea.y + Math.round((workArea.height - height) / 2) 
+      };
+    case 'bottom-left':
+      return { x: workArea.x + margin, y: workArea.y + workArea.height - height - margin };
+    case 'bottom-right':
+      return { x: workArea.x + workArea.width - width - margin, y: workArea.y + workArea.height - height - margin };
+    default:
+      return { x: workArea.x + workArea.width - width - margin, y: workArea.y + margin };
+  }
+}
+
+function createMiniPlayer(settings = {}) {
   if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
     miniPlayerWindow.focus();
     return;
   }
 
+  const width = 320;
+  const height = 160;
+  const position = settings.miniPlayerPosition || 'top-right';
+  const alwaysOnTop = settings.miniPlayerAlwaysOnTop !== false;
+  const opacity = (settings.miniPlayerOpacity || 100) / 100;
+  const { x, y } = getMiniPlayerPosition(position, width, height);
+
   miniPlayerWindow = new BrowserWindow({
-    width: 320,
-    height: 160,
+    width,
+    height,
+    x,
+    y,
     frame: false,
     transparent: false,
     resizable: false,
-    alwaysOnTop: true,
+    alwaysOnTop,
     skipTaskbar: true,
     backgroundColor: '#0d0d0d',
+    opacity,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -1303,8 +1339,8 @@ function updateMiniPlayer(data) {
 }
 
 // IPC handlers for mini player
-ipcMain.on('open-mini-player', () => {
-  createMiniPlayer();
+ipcMain.on('open-mini-player', (event, settings) => {
+  createMiniPlayer(settings || {});
   // Hide main window when mini player opens
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
@@ -1322,6 +1358,25 @@ ipcMain.on('close-mini-player', () => {
 
 ipcMain.on('update-mini-player', (event, data) => {
   updateMiniPlayer(data);
+});
+
+// Handle mini player settings update
+ipcMain.on('update-mini-player-settings', (event, settings) => {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    // Update always on top
+    if (settings.miniPlayerAlwaysOnTop !== undefined) {
+      miniPlayerWindow.setAlwaysOnTop(settings.miniPlayerAlwaysOnTop);
+    }
+    // Update opacity
+    if (settings.miniPlayerOpacity !== undefined) {
+      miniPlayerWindow.setOpacity(settings.miniPlayerOpacity / 100);
+    }
+    // Update position
+    if (settings.miniPlayerPosition) {
+      const { x, y } = getMiniPlayerPosition(settings.miniPlayerPosition, 320, 160);
+      miniPlayerWindow.setPosition(x, y);
+    }
+  }
 });
 
 ipcMain.on('mini-player-action', (event, action, ...args) => {

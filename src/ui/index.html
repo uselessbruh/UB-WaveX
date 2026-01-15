@@ -22,17 +22,17 @@
                     <span>Search</span>
                 </a>
                 <a href="#" class="nav-item" data-view="downloads">
-                    <img src="../public/downloadBlack.png" class="icon theme-icon" data-icon="download" alt="Downloads">
+                    <img src="../public/downloadWhite.png" class="icon theme-icon" data-icon="download" alt="Downloads">
                     <span>Downloads</span>
                     <button class="nav-menu-btn" data-view="downloads" title="Downloads options">
-                        <img src="../public/3dotBlack.png" alt="Menu">
+                        <img src="../public/3dotWhite.png" alt="Menu">
                     </button>
                 </a>
                 <a href="#" class="nav-item" data-view="liked">
                     <img src="../public/liked.png" class="icon liked-icon" alt="Liked Songs">
                     <span>Liked Songs</span>
                     <button class="nav-menu-btn" data-view="liked" title="Liked Songs options">
-                        <img src="../public/3dotBlack.png" alt="Menu">
+                        <img src="../public/3dotWhite.png" alt="Menu">
                     </button>
                 </a>
             </nav>
@@ -43,7 +43,7 @@
                 <div class="section-header">
                     <h3>Playlists</h3>
                     <button class="btn-icon" id="btn-new-playlist" title="Create Playlist">
-                        <img src="../public/addBlack.png" class="theme-icon" data-icon="add" alt="Add Playlist">
+                        <img src="../public/addWhite.png" class="theme-icon" data-icon="add" alt="Add Playlist">
                     </button>
                 </div>
                 <div id="playlist-list" class="playlist-list">
@@ -55,7 +55,7 @@
 
             <div class="sidebar-footer">
                 <a href="#" class="nav-item" data-view="settings">
-                    <img src="../public/settingsBlack.png" class="icon theme-icon" data-icon="settings" alt="Settings">
+                    <img src="../public/settingsWhite.png" class="icon theme-icon" data-icon="settings" alt="Settings">
                     <span>Settings</span>
                 </a>
             </div>
@@ -236,6 +236,55 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="toggle-switch" id="toggle-gapless" data-setting="gapless"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Mini Player</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Enable Mini Player</label>
+                                    <p class="setting-description">Show mini player button in player controls</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" id="toggle-mini-player" data-setting="miniPlayerEnabled"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Default Position</label>
+                                    <p class="setting-description">Choose where mini player appears on screen</p>
+                                </div>
+                                <div class="setting-control">
+                                    <select id="mini-player-position" class="select-input">
+                                        <option value="top-left">Top Left</option>
+                                        <option value="top-right" selected>Top Right</option>
+                                        <option value="middle">Center</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="bottom-right">Bottom Right</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Always on Top</label>
+                                    <p class="setting-description">Keep mini player above all other windows</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" id="toggle-mini-player-ontop" data-setting="miniPlayerAlwaysOnTop"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Window Opacity</label>
+                                    <p class="setting-description">Adjust mini player transparency (50-100%)</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="slider-control">
+                                        <input type="range" id="mini-player-opacity-slider" class="slider-input" min="50" max="100" value="100">
+                                        <span id="mini-player-opacity-value" class="slider-value">100%</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -571,7 +620,10 @@
                     <div class="player-title-wrapper">
                         <div id="player-title" class="player-title">No track playing</div>
                     </div>
-                    <div id="player-artist" class="player-artist">Unknown Artist</div>
+                    <div class="player-artist-wrapper">
+                        <span id="player-artist" class="player-artist">Unknown Artist</span>
+                        <span id="playback-source" class="playback-source"></span>
+                    </div>
                 </div>
             </div>
 

@@ -540,20 +540,8 @@ class AudioPlayer {
 
     updatePlaybackSourceUI() {
         // Update UI to show where music is playing from
-        const sourceElement = document.getElementById('playback-source');
-
-        if (!sourceElement) {
-            // Create source element if it doesn't exist
-            const wrapper = document.querySelector('.player-title-wrapper');
-            if (wrapper) {
-                const source = document.createElement('div');
-                source.id = 'playback-source';
-                source.className = 'playback-source';
-                wrapper.appendChild(source);
-            }
-        }
-
         const source = document.getElementById('playback-source');
+
         if (source) {
             if (this.playbackContext.type && this.playbackContext.type !== 'online') {
                 let displayText = '';
@@ -569,7 +557,7 @@ class AudioPlayer {
                 }
 
                 source.textContent = displayText;
-                source.style.display = 'block';
+                source.style.display = 'inline';
             } else {
                 source.style.display = 'none';
             }
@@ -630,13 +618,15 @@ class AudioPlayer {
     async playNext() {
         let nextTrack = null;
 
+        console.log('playNext called. temporaryQueue:', this.temporaryQueue.length, 'contextQueue:', this.contextQueue.length, 'contextQueueIndex:', this.contextQueueIndex);
+
         // Spotify logic: Check temporary queue first, then context queue
         if (this.temporaryQueue.length > 0) {
             // Play from temporary queue
             nextTrack = this.temporaryQueue.shift();
             // Rebuild combined queue after removing from temporary queue
             this.rebuildCombinedQueue();
-        } else if (this.contextQueueIndex < this.contextQueue.length - 1) {
+        } else if (this.contextQueue.length > 0 && this.contextQueueIndex < this.contextQueue.length - 1) {
             // Play next from context queue
             this.contextQueueIndex++;
             nextTrack = this.contextQueue[this.contextQueueIndex];
@@ -644,6 +634,7 @@ class AudioPlayer {
         }
 
         if (nextTrack) {
+            console.log('Playing next track:', nextTrack.title);
             // Handle gapless playback - reduce delay
             const settings = window.getPlaybackSettings?.() || {};
             if (settings.gapless) {
@@ -657,6 +648,8 @@ class AudioPlayer {
             this.updatePlaybackSourceUI();
             // Preload more tracks
             this.preloadUpcomingTracks();
+        } else {
+            console.log('No next track available. End of queue.');
         }
     }
 
@@ -697,7 +690,9 @@ class AudioPlayer {
             btnMiniPlayer.classList.remove('active');
             this.miniPlayerOpen = false;
         } else {
-            ipcRenderer.send('open-mini-player');
+            // Get mini player settings and send with open request
+            const settings = window.getMiniPlayerSettings ? window.getMiniPlayerSettings() : {};
+            ipcRenderer.send('open-mini-player', settings);
             btnMiniPlayer.classList.add('active');
             this.miniPlayerOpen = true;
             this.sendMiniPlayerUpdate();
@@ -710,8 +705,7 @@ class AudioPlayer {
         const data = {
             track: this.currentTrack ? {
                 title: this.currentTrack.title,
-                artist: this.currentTrack.artist,
-                thumbnail: this.currentTrack.thumbnail
+                artist: this.currentTrack.artist || this.currentTrack.artist_name || 'Unknown Artist'
             } : null,
             isPlaying: !this.audio.paused,
             currentTime: this.audio.currentTime,
@@ -1043,6 +1037,9 @@ class AudioPlayer {
                 this.currentTrack = track;
                 this.updatePlayerUI(track);
 
+                // Rebuild the combined queue for proper next/previous functionality
+                this.rebuildCombinedQueue();
+
                 // Prepare audio source but don't play
                 if (track.file_path && track.downloaded) {
                     this.audio.src = `file:///${track.file_path.replace(/\\/g, '/')}`;
@@ -1064,20 +1061,10 @@ class AudioPlayer {
                 // Update UI
                 this.updatePlaybackSourceUI();
 
+                console.log('Playback state restored. Context queue has', this.contextQueue.length, 'tracks, index:', this.contextQueueIndex);
+
             } catch (error) {
                 console.error('Failed to restore playback state:', error);
-            }
-        }
-    }
-
-    savePlaybackState() {
-        // Save current track and position for autoplay feature
-        if (this.currentTrack && this.audio.currentTime > 0) {
-            try {
-                localStorage.setItem('lastPlayedTrackId', this.currentTrack.youtube_id);
-                localStorage.setItem('lastPlayedPosition', this.audio.currentTime.toString());
-            } catch (error) {
-                console.error('Failed to save playback state:', error);
             }
         }
     }

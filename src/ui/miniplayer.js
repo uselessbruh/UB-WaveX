@@ -3,7 +3,6 @@ const { ipcRenderer } = require('electron');
 // DOM elements
 const miniTitle = document.getElementById('mini-title');
 const miniArtist = document.getElementById('mini-artist');
-const miniThumbnail = document.getElementById('mini-thumbnail');
 const miniPlayPauseBtn = document.getElementById('mini-play-pause');
 const miniPlayIcon = document.getElementById('mini-play-icon');
 const miniPauseIcon = document.getElementById('mini-pause-icon');
@@ -57,19 +56,14 @@ function formatTime(seconds) {
 
 // Update UI with track info
 ipcRenderer.on('mini-player-update', (event, data) => {
+    console.log('Mini player update received:', data);
+    
     if (data.track) {
         currentTrack = data.track;
         miniTitle.textContent = data.track.title || 'Unknown Title';
         miniArtist.textContent = data.track.artist || 'Unknown Artist';
-
-        if (data.track.thumbnail && data.track.thumbnail.trim() !== '') {
-            miniThumbnail.src = data.track.thumbnail;
-            miniThumbnail.classList.remove('hidden');
-            miniThumbnail.style.display = 'block';
-        } else {
-            miniThumbnail.classList.add('hidden');
-            miniThumbnail.style.display = 'none';
-        }
+        
+        console.log('Artist set to:', miniArtist.textContent);
     }
 
     if (data.isPlaying !== undefined) {
@@ -121,7 +115,7 @@ miniExpandBtn.addEventListener('click', () => {
 });
 
 miniCloseBtn.addEventListener('click', () => {
-    ipcRenderer.send('mini-player-action', 'close');
+    ipcRenderer.send('close-mini-player');
 });
 
 // Progress bar seeking

@@ -57,19 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSearchHistory();
     loadRecentPlays();
 
-    // Set correct icon for initially active tab based on theme
-    const activeNavItem = document.querySelector('.nav-item.active');
-    if (activeNavItem) {
-        const activeIcon = activeNavItem.querySelector('.icon.theme-icon');
-        if (activeIcon) {
-            const theme = getCurrentTheme();
-            const iconType = activeIcon.dataset.icon;
-            // Dark theme: white bg, use black icon
-            // Light theme: black bg, use white icon
-            const activeIconSuffix = theme === 'light' ? 'White' : 'Black';
-            activeIcon.src = `../public/${iconType}${activeIconSuffix}.png`;
-        }
-    }
+    // Update all nav icons based on current theme and active state
+    updateNavigationState('search');
 });
 
 // Save playback state before window closes
@@ -360,6 +349,30 @@ function setupEventListeners() {
         savePlaybackSetting('crossfadeDuration', parseFloat(this.value));
     });
 
+    // Mini Player settings
+    document.getElementById('toggle-mini-player')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveMiniPlayerSetting('miniPlayerEnabled', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-mini-player-ontop')?.addEventListener('click', function () {
+        this.classList.toggle('active');
+        saveMiniPlayerSetting('miniPlayerAlwaysOnTop', this.classList.contains('active'));
+    });
+
+    document.getElementById('mini-player-position')?.addEventListener('change', function () {
+        saveMiniPlayerSetting('miniPlayerPosition', this.value);
+    });
+
+    const miniPlayerOpacitySlider = document.getElementById('mini-player-opacity-slider');
+    const miniPlayerOpacityValue = document.getElementById('mini-player-opacity-value');
+    miniPlayerOpacitySlider?.addEventListener('input', function () {
+        miniPlayerOpacityValue.textContent = this.value + '%';
+    });
+    miniPlayerOpacitySlider?.addEventListener('change', function () {
+        saveMiniPlayerSetting('miniPlayerOpacity', parseInt(this.value));
+    });
+
     // Download settings
     document.getElementById('toggle-auto-download')?.addEventListener('click', function () {
         this.classList.toggle('active');
@@ -481,6 +494,7 @@ function setupEventListeners() {
     loadPerformanceSettings();
     loadPrivacySettings();
     loadNotificationSettings();
+    loadMiniPlayerSettings();
 
     // Context Menu
     document.addEventListener('click', () => {
@@ -3604,6 +3618,99 @@ function getNotificationSettings() {
 
 window.getNotificationSettings = getNotificationSettings;
 window.showNotification = showNotification;
+
+// ================================
+// Mini Player Settings Management
+// ================================
+
+const defaultMiniPlayerSettings = {
+    miniPlayerEnabled: true,
+    miniPlayerPosition: 'top-right',
+    miniPlayerAlwaysOnTop: true,
+    miniPlayerOpacity: 100
+};
+
+let miniPlayerSettings = { ...defaultMiniPlayerSettings };
+
+function loadMiniPlayerSettings() {
+    try {
+        const saved = localStorage.getItem('miniPlayerSettings');
+        if (saved) {
+            miniPlayerSettings = { ...defaultMiniPlayerSettings, ...JSON.parse(saved) };
+        }
+
+        // Update UI
+        const enableToggle = document.getElementById('toggle-mini-player');
+        if (enableToggle) {
+            if (miniPlayerSettings.miniPlayerEnabled) {
+                enableToggle.classList.add('active');
+            } else {
+                enableToggle.classList.remove('active');
+            }
+        }
+
+        const positionSelect = document.getElementById('mini-player-position');
+        if (positionSelect) {
+            positionSelect.value = miniPlayerSettings.miniPlayerPosition;
+        }
+
+        const alwaysOnTopToggle = document.getElementById('toggle-mini-player-ontop');
+        if (alwaysOnTopToggle) {
+            if (miniPlayerSettings.miniPlayerAlwaysOnTop) {
+                alwaysOnTopToggle.classList.add('active');
+            } else {
+                alwaysOnTopToggle.classList.remove('active');
+            }
+        }
+
+        const opacitySlider = document.getElementById('mini-player-opacity-slider');
+        const opacityValue = document.getElementById('mini-player-opacity-value');
+        if (opacitySlider && opacityValue) {
+            opacitySlider.value = miniPlayerSettings.miniPlayerOpacity;
+            opacityValue.textContent = miniPlayerSettings.miniPlayerOpacity + '%';
+        }
+
+        // Update mini player button visibility
+        updateMiniPlayerButtonVisibility();
+    } catch (error) {
+        console.error('Failed to load mini player settings:', error);
+    }
+}
+
+function saveMiniPlayerSetting(key, value) {
+    try {
+        miniPlayerSettings[key] = value;
+        localStorage.setItem('miniPlayerSettings', JSON.stringify(miniPlayerSettings));
+        console.log(`Mini player setting saved: ${key} = ${value}`);
+
+        // Update mini player button visibility if enabled setting changed
+        if (key === 'miniPlayerEnabled') {
+            updateMiniPlayerButtonVisibility();
+        }
+
+        // Notify main process to update mini player window settings
+        ipcRenderer.send('update-mini-player-settings', miniPlayerSettings);
+    } catch (error) {
+        console.error('Failed to save mini player setting:', error);
+    }
+}
+
+function updateMiniPlayerButtonVisibility() {
+    const btnMiniPlayer = document.getElementById('btn-mini-player');
+    if (btnMiniPlayer) {
+        if (miniPlayerSettings.miniPlayerEnabled) {
+            btnMiniPlayer.style.display = '';
+        } else {
+            btnMiniPlayer.style.display = 'none';
+        }
+    }
+}
+
+function getMiniPlayerSettings() {
+    return miniPlayerSettings;
+}
+
+window.getMiniPlayerSettings = getMiniPlayerSettings;
 
 // ================================
 // Themed Modal Dialog
