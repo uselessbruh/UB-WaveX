@@ -579,8 +579,23 @@ function switchToPlaylistView(playlistId, playlistName) {
     currentPlaylistId = playlistId;
     currentPlaylistName = playlistName;
 
-    // Update navigation
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    // Update navigation - remove active from all nav items and update icons
+    const theme = getCurrentTheme();
+    document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.remove('active');
+        // Update icon to inactive state
+        const icon = n.querySelector('.icon.theme-icon');
+        if (icon) {
+            const iconType = icon.dataset.icon;
+            const suffix = theme === 'light' ? 'Black' : 'White';
+            icon.src = `../public/${iconType}${suffix}.png`;
+        }
+        // Update 3-dot menu icon
+        const menuBtn = n.querySelector('.nav-menu-btn img');
+        if (menuBtn) {
+            menuBtn.src = theme === 'light' ? '../public/3dotBlack.png' : '../public/3dotWhite.png';
+        }
+    });
 
     // Hide all views
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
