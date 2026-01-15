@@ -20,14 +20,15 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "png-to-ico": "^3.0.1"
   },
   "dependencies": {
     "sql.js": "^1.8.0"
   },
   "build": {
-    "appId": "com.ubwavex.app",
-    "productName": "UB-WaveX",
+    "appId": "com.wavex.app",
+    "productName": "WaveX",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -35,6 +36,7 @@
     "files": [
       "src/electron/**/*",
       "src/ui/**/*",
+      "src/public/**/*",
       "resources/**/*",
       "node_modules/**/*",
       "package.json"
@@ -59,11 +61,14 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.ico"
+      "icon": "src/public/iconWhite.png"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WaveX"
     }
   }
 }

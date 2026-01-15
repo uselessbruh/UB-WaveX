@@ -48,14 +48,26 @@ class MusicCore:
     def _get_ffmpeg_path(self) -> str:
         """Get the path to bundled FFmpeg executable"""
         if getattr(sys, 'frozen', False):
-            # Running as compiled executable
-            base_path = Path(sys._MEIPASS)
+            # Running as compiled executable (packaged with Electron)
+            # FFmpeg is in the same resources folder, under executables
+            exe_dir = Path(sys.executable).parent
+            # Go up from python folder to resources, then into executables
+            ffmpeg_exe = exe_dir.parent / 'executables' / 'ffmpeg.exe'
+            if ffmpeg_exe.exists():
+                return str(ffmpeg_exe)
+            # Fallback: check in same directory as music_core.exe
+            ffmpeg_exe = exe_dir / 'ffmpeg.exe'
+            if ffmpeg_exe.exists():
+                return str(ffmpeg_exe)
         else:
             # Running in development
             base_path = Path(__file__).parent.parent.parent
+            ffmpeg_exe = base_path / 'executables' / 'ffmpeg.exe'
+            if ffmpeg_exe.exists():
+                return str(ffmpeg_exe)
         
-        ffmpeg_exe = base_path / 'executables' / 'ffmpeg.exe'
-        return str(ffmpeg_exe)
+        # Last resort: hope ffmpeg is in PATH
+        return 'ffmpeg'
         
     def connect_database(self):
         """Connect to SQLite database"""

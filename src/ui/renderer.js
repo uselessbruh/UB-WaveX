@@ -2236,7 +2236,7 @@ function updateAllIcons() {
     // Update about section logo
     const aboutLogo = document.getElementById('about-logo');
     if (aboutLogo) {
-        const iconSuffix = theme === 'light' ? 'black' : 'white';
+        const iconSuffix = theme === 'light' ? 'Black' : 'White';
         aboutLogo.src = `../public/wavex${iconSuffix}.png`;
     }
 }

@@ -21,8 +21,9 @@ function getDatabasePath() {
 }
 
 // Get theme-appropriate icon
-function getAppIcon() {
-  const isDark = nativeTheme.shouldUseDarkColors;
+function getAppIcon(theme) {
+  // If theme is passed, use it; otherwise default to dark theme (white icon)
+  const isDark = theme ? theme === 'dark' : true;
   const iconName = isDark ? 'iconWhite.png' : 'iconBlack.png';
   return path.join(__dirname, '../public', iconName);
 }
@@ -1076,8 +1077,12 @@ ipcMain.handle('update-app-icon', async (event, theme) => {
   try {
     const iconName = theme === 'dark' ? 'iconWhite.png' : 'iconBlack.png';
     const iconPath = path.join(__dirname, '../public', iconName);
+    console.log('Updating app icon to:', iconPath);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setIcon(iconPath);
+    }
+    if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+      miniPlayerWindow.setIcon(iconPath);
     }
     return { success: true };
   } catch (error) {
