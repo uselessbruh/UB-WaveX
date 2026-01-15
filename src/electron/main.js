@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const initSqlJs = require('sql.js');
@@ -201,6 +201,19 @@ function startPythonCore() {
   });
 
   console.log('Python core started successfully');
+
+  // Send directory settings to Python after startup
+  setTimeout(() => {
+    const settings = loadSettings();
+    if (pythonProcess && pythonProcess.stdin && !pythonProcess.stdin.destroyed) {
+      const updateDirsCommand = {
+        command: 'update_directories',
+        download_directory: settings.downloadDirectory,
+        database_directory: settings.databaseDirectory
+      };
+      pythonProcess.stdin.write(JSON.stringify(updateDirsCommand) + '\n');
+    }
+  }, 1000);
 }
 
 // Handle responses from Python core
@@ -1008,6 +1021,121 @@ ipcMain.handle('update-app-icon', async (event, theme) => {
     return { success: true };
   } catch (error) {
     console.error('Failed to update app icon:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Settings: Directory Selection and Management
+
+// Get default directories
+function getDefaultDownloadDirectory() {
+  return path.join(app.getPath('music'), 'UB-WaveX');
+}
+
+function getDefaultDatabaseDirectory() {
+  return app.getPath('userData');
+}
+
+// Get settings file path
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+// Load settings from file
+function loadSettings() {
+  try {
+    const settingsPath = getSettingsPath();
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+  }
+  return {
+    downloadDirectory: getDefaultDownloadDirectory(),
+    databaseDirectory: getDefaultDatabaseDirectory()
+  };
+}
+
+// Save settings to file
+function saveSettings(settings) {
+  try {
+    const settingsPath = getSettingsPath();
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return false;
+  }
+}
+
+// Get current settings
+ipcMain.handle('get-settings', async () => {
+  try {
+    return {
+      success: true,
+      settings: loadSettings(),
+      defaults: {
+        downloadDirectory: getDefaultDownloadDirectory(),
+        databaseDirectory: getDefaultDatabaseDirectory()
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Browse for directory
+ipcMain.handle('browse-directory', async (event, options) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: options.title || 'Select Directory',
+      defaultPath: options.defaultPath || app.getPath('home')
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { success: true, path: result.filePaths[0] };
+    }
+    return { success: false, canceled: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Update settings
+ipcMain.handle('update-settings', async (event, settings) => {
+  try {
+    // Validate directories exist or create them
+    if (settings.downloadDirectory) {
+      if (!fs.existsSync(settings.downloadDirectory)) {
+        fs.mkdirSync(settings.downloadDirectory, { recursive: true });
+      }
+    }
+
+    if (settings.databaseDirectory) {
+      if (!fs.existsSync(settings.databaseDirectory)) {
+        fs.mkdirSync(settings.databaseDirectory, { recursive: true });
+      }
+    }
+
+    const success = saveSettings(settings);
+    if (success) {
+      // Send settings to Python process if directory changed
+      if (pythonProcess && pythonProcess.stdin && !pythonProcess.stdin.destroyed) {
+        const updateDirsCommand = {
+          command: 'update_directories',
+          download_directory: settings.downloadDirectory,
+          database_directory: settings.databaseDirectory
+        };
+        pythonProcess.stdin.write(JSON.stringify(updateDirsCommand) + '\n');
+      }
+
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to save settings' };
+  } catch (error) {
     return { success: false, error: error.message };
   }
 });

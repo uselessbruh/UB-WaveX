@@ -280,10 +280,28 @@ function setupEventListeners() {
         });
     });
 
+    // Directory settings
+    document.getElementById('btn-browse-download-dir')?.addEventListener('click', async () => {
+        await browseDownloadDirectory();
+    });
+
+    document.getElementById('btn-browse-database-dir')?.addEventListener('click', async () => {
+        await browseDatabaseDirectory();
+    });
+
+    document.getElementById('btn-reset-download-dir')?.addEventListener('click', async () => {
+        await resetDownloadDirectory();
+    });
+
+    document.getElementById('btn-reset-database-dir')?.addEventListener('click', async () => {
+        await resetDatabaseDirectory();
+    });
+
     // Load saved theme
     loadTheme();
     loadQuality();
     loadStreamQuality();
+    loadDirectorySettings();
 
     // Context Menu
     document.addEventListener('click', () => {
@@ -2676,3 +2694,135 @@ ipcRenderer.on('stop-track-for-deletion', (event, youtubeId) => {
         }
     }
 });
+
+// ================================
+// Directory Settings Management
+// ================================
+
+let currentSettings = {
+    downloadDirectory: '',
+    databaseDirectory: ''
+};
+
+// Load directory settings from main process
+async function loadDirectorySettings() {
+    try {
+        const result = await ipcRenderer.invoke('get-settings');
+        if (result.success) {
+            currentSettings = result.settings;
+            const defaults = result.defaults;
+
+            // Update UI
+            const downloadInput = document.getElementById('download-directory-input');
+            const databaseInput = document.getElementById('database-directory-input');
+
+            if (downloadInput) {
+                downloadInput.value = currentSettings.downloadDirectory || defaults.downloadDirectory;
+                downloadInput.title = currentSettings.downloadDirectory || defaults.downloadDirectory;
+            }
+
+            if (databaseInput) {
+                databaseInput.value = currentSettings.databaseDirectory || defaults.databaseDirectory;
+                databaseInput.title = currentSettings.databaseDirectory || defaults.databaseDirectory;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load directory settings:', error);
+    }
+}
+
+// Browse for download directory
+async function browseDownloadDirectory() {
+    try {
+        const result = await ipcRenderer.invoke('browse-directory', {
+            title: 'Select Download Directory',
+            defaultPath: currentSettings.downloadDirectory
+        });
+
+        if (result.success && !result.canceled) {
+            currentSettings.downloadDirectory = result.path;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Download directory updated successfully');
+        }
+    } catch (error) {
+        console.error('Failed to browse download directory:', error);
+        showNotification('Failed to update download directory', 'error');
+    }
+}
+
+// Browse for database directory
+async function browseDatabaseDirectory() {
+    try {
+        const result = await ipcRenderer.invoke('browse-directory', {
+            title: 'Select Database Directory',
+            defaultPath: currentSettings.databaseDirectory
+        });
+
+        if (result.success && !result.canceled) {
+            currentSettings.databaseDirectory = result.path;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Database directory updated. Please restart the app for changes to take effect.', 'warning');
+        }
+    } catch (error) {
+        console.error('Failed to browse database directory:', error);
+        showNotification('Failed to update database directory', 'error');
+    }
+}
+
+// Reset download directory to default
+async function resetDownloadDirectory() {
+    try {
+        const result = await ipcRenderer.invoke('get-settings');
+        if (result.success) {
+            currentSettings.downloadDirectory = result.defaults.downloadDirectory;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Download directory reset to default');
+        }
+    } catch (error) {
+        console.error('Failed to reset download directory:', error);
+        showNotification('Failed to reset download directory', 'error');
+    }
+}
+
+// Reset database directory to default
+async function resetDatabaseDirectory() {
+    try {
+        const result = await ipcRenderer.invoke('get-settings');
+        if (result.success) {
+            currentSettings.databaseDirectory = result.defaults.databaseDirectory;
+            await saveDirectorySettings();
+            await loadDirectorySettings();
+            showNotification('Database directory reset. Please restart the app for changes to take effect.', 'warning');
+        }
+    } catch (error) {
+        console.error('Failed to reset database directory:', error);
+        showNotification('Failed to reset database directory', 'error');
+    }
+}
+
+// Save directory settings
+async function saveDirectorySettings() {
+    try {
+        const result = await ipcRenderer.invoke('update-settings', currentSettings);
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to save settings');
+        }
+    } catch (error) {
+        console.error('Failed to save directory settings:', error);
+        throw error;
+    }
+}
+
+// Simple notification function
+function showNotification(message, type = 'success') {
+    // You can enhance this with a proper notification UI later
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    
+    // For now, just show an alert for important messages
+    if (type === 'warning' || type === 'error') {
+        alert(message);
+    }
+}

@@ -525,6 +525,28 @@ class IPCHandler:
             elif action == 'resolve_metadata':
                 result = self.music_core.resolve_metadata(params)
                 return self.success_response(request_id, result)
+            
+            elif action == 'update_directories':
+                # Update directories from settings
+                download_dir = params.get('download_directory')
+                database_dir = params.get('database_directory')
+                
+                if download_dir:
+                    self.music_core.download_dir = Path(download_dir)
+                    self.music_core.download_dir.mkdir(parents=True, exist_ok=True)
+                
+                if database_dir:
+                    # Reconnect to database in new location
+                    new_db_path = Path(database_dir) / 'ubwavex.db'
+                    if self.music_core.db_connection:
+                        self.music_core.db_connection.close()
+                    self.music_core.db_path = new_db_path
+                    self.music_core.connect_database()
+                
+                return self.success_response(request_id, {
+                    'download_dir': str(self.music_core.download_dir),
+                    'db_path': str(self.music_core.db_path)
+                })
                 
             else:
                 return self.error_response(request_id, f"Unknown action: {action}")
@@ -557,6 +579,27 @@ class IPCHandler:
                     break
                     
                 request = json.loads(line.strip())
+                
+                # Handle commands without request_id (like update_directories)
+                if 'command' in request and 'request_id' not in request:
+                    command = request.get('command')
+                    if command == 'update_directories':
+                        download_dir = request.get('download_directory')
+                        database_dir = request.get('database_directory')
+                        
+                        if download_dir:
+                            self.music_core.download_dir = Path(download_dir)
+                            self.music_core.download_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        if database_dir:
+                            # Reconnect to database in new location
+                            new_db_path = Path(database_dir) / 'ubwavex.db'
+                            if self.music_core.db_connection:
+                                self.music_core.db_connection.close()
+                            self.music_core.db_path = new_db_path
+                            self.music_core.connect_database()
+                    continue
+                
                 response = self.handle_request(request)
                 
                 # Write response to STDOUT
