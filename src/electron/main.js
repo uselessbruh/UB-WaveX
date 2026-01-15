@@ -1271,9 +1271,9 @@ function getMiniPlayerPosition(position, width, height) {
     case 'top-right':
       return { x: workArea.x + workArea.width - width - margin, y: workArea.y + margin };
     case 'middle':
-      return { 
-        x: workArea.x + Math.round((workArea.width - width) / 2), 
-        y: workArea.y + Math.round((workArea.height - height) / 2) 
+      return {
+        x: workArea.x + Math.round((workArea.width - width) / 2),
+        y: workArea.y + Math.round((workArea.height - height) / 2)
       };
     case 'bottom-left':
       return { x: workArea.x + margin, y: workArea.y + workArea.height - height - margin };

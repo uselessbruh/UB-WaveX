@@ -57,12 +57,12 @@ function formatTime(seconds) {
 // Update UI with track info
 ipcRenderer.on('mini-player-update', (event, data) => {
     console.log('Mini player update received:', data);
-    
+
     if (data.track) {
         currentTrack = data.track;
         miniTitle.textContent = data.track.title || 'Unknown Title';
         miniArtist.textContent = data.track.artist || 'Unknown Artist';
-        
+
         console.log('Artist set to:', miniArtist.textContent);
     }
 
