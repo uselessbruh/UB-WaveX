@@ -178,15 +178,63 @@
                                     <label>Theme</label>
                                     <p class="setting-description">Choose between light and dark theme</p>
                                 </div>
-                                <div class="theme-toggle">
-                                    <button class="theme-btn" data-theme="dark">
-                                        <span class="icon">🌙</span>
-                                        <span>Dark</span>
-                                    </button>
-                                    <button class="theme-btn active" data-theme="light">
-                                        <span class="icon">☀️</span>
-                                        <span>Light</span>
-                                    </button>
+                                <div class="setting-control">
+                                    <div class="theme-toggle">
+                                        <button class="theme-btn" data-theme="dark">
+                                            <span class="icon">🌙</span>
+                                            <span>Dark</span>
+                                        </button>
+                                        <button class="theme-btn active" data-theme="light">
+                                            <span class="icon">☀️</span>
+                                            <span>Light</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Playback</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Auto-play on Startup</label>
+                                    <p class="setting-description">Resume playback of last track when app starts</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch" id="toggle-autoplay" data-setting="autoplay"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Default Volume</label>
+                                    <p class="setting-description">Set the default volume level (0-100%)</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="slider-control">
+                                        <input type="range" id="volume-slider" class="slider-input" min="0" max="100" value="70">
+                                        <span id="volume-value" class="slider-value">70%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Crossfade Duration</label>
+                                    <p class="setting-description">Smooth transition between tracks (0-10 seconds, 0 = disabled)</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="slider-control">
+                                        <input type="range" id="crossfade-slider" class="slider-input" min="0" max="10" value="0" step="0.5">
+                                        <span id="crossfade-value" class="slider-value">0s</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Gapless Playback</label>
+                                    <p class="setting-description">Play tracks without pauses between them</p>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch" id="toggle-gapless" data-setting="gapless"></div>
                                 </div>
                             </div>
                         </div>
@@ -198,11 +246,13 @@
                                     <label>Download Directory</label>
                                     <p class="setting-description">Choose where to save downloaded music files</p>
                                 </div>
-                                <div class="directory-setting">
-                                    <input type="text" id="download-directory-input" class="directory-input" readonly />
-                                    <button id="btn-browse-download-dir" class="btn-browse">Browse</button>
-                                    <button id="btn-reset-download-dir" class="btn-reset"
-                                        title="Reset to default">Reset</button>
+                                <div class="setting-control">
+                                    <div class="directory-setting">
+                                        <input type="text" id="download-directory-input" class="directory-input" readonly />
+                                        <button id="btn-browse-download-dir" class="btn-browse">Browse</button>
+                                        <button id="btn-reset-download-dir" class="btn-reset"
+                                            title="Reset to default">Reset</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -211,12 +261,14 @@
                                     <p class="setting-description">Choose download quality (higher quality = larger file
                                         size)</p>
                                 </div>
-                                <div class="quality-toggle">
-                                    <button class="quality-btn" data-quality="128">128 kbps</button>
-                                    <button class="quality-btn" data-quality="192">192 kbps</button>
-                                    <button class="quality-btn" data-quality="256">256 kbps</button>
-                                    <button class="quality-btn active" data-quality="320">320 kbps</button>
-                                    <button class="quality-btn" data-quality="flac">FLAC (Lossless)</button>
+                                <div class="setting-control">
+                                    <div class="quality-toggle">
+                                        <button class="quality-btn" data-quality="128">128 kbps</button>
+                                        <button class="quality-btn" data-quality="192">192 kbps</button>
+                                        <button class="quality-btn" data-quality="256">256 kbps</button>
+                                        <button class="quality-btn active" data-quality="320">320 kbps</button>
+                                        <button class="quality-btn" data-quality="flac">FLAC (Lossless)</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -228,11 +280,13 @@
                                     <label>Database Directory</label>
                                     <p class="setting-description">Choose where to store app data and database</p>
                                 </div>
-                                <div class="directory-setting">
-                                    <input type="text" id="database-directory-input" class="directory-input" readonly />
-                                    <button id="btn-browse-database-dir" class="btn-browse">Browse</button>
-                                    <button id="btn-reset-database-dir" class="btn-reset"
-                                        title="Reset to default">Reset</button>
+                                <div class="setting-control">
+                                    <div class="directory-setting">
+                                        <input type="text" id="database-directory-input" class="directory-input" readonly />
+                                        <button id="btn-browse-database-dir" class="btn-browse">Browse</button>
+                                        <button id="btn-reset-database-dir" class="btn-reset"
+                                            title="Reset to default">Reset</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -245,13 +299,15 @@
                                     <p class="setting-description">Choose playback quality for streaming (higher quality
                                         = more bandwidth)</p>
                                 </div>
-                                <div class="stream-quality-toggle">
-                                    <button class="stream-quality-btn" data-stream-quality="low">Low (Save
-                                        Data)</button>
-                                    <button class="stream-quality-btn" data-stream-quality="medium">Medium</button>
-                                    <button class="stream-quality-btn active" data-stream-quality="high">High</button>
-                                    <button class="stream-quality-btn" data-stream-quality="best">Best
-                                        Available</button>
+                                <div class="setting-control">
+                                    <div class="stream-quality-toggle">
+                                        <button class="stream-quality-btn" data-stream-quality="low">Low (Save
+                                            Data)</button>
+                                        <button class="stream-quality-btn" data-stream-quality="medium">Medium</button>
+                                        <button class="stream-quality-btn active" data-stream-quality="high">High</button>
+                                        <button class="stream-quality-btn" data-stream-quality="best">Best
+                                            Available</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -297,11 +297,45 @@ function setupEventListeners() {
         await resetDatabaseDirectory();
     });
 
+    // Playback settings
+    document.getElementById('toggle-autoplay')?.addEventListener('click', function() {
+        this.classList.toggle('active');
+        savePlaybackSetting('autoplay', this.classList.contains('active'));
+    });
+
+    document.getElementById('toggle-gapless')?.addEventListener('click', function() {
+        this.classList.toggle('active');
+        savePlaybackSetting('gapless', this.classList.contains('active'));
+    });
+
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeValue = document.getElementById('volume-value');
+    volumeSlider?.addEventListener('input', function() {
+        volumeValue.textContent = this.value + '%';
+    });
+    volumeSlider?.addEventListener('change', function() {
+        savePlaybackSetting('defaultVolume', parseInt(this.value));
+        // Update current player volume if playing
+        if (window.player && window.player.audio) {
+            window.player.audio.volume = parseInt(this.value) / 100;
+        }
+    });
+
+    const crossfadeSlider = document.getElementById('crossfade-slider');
+    const crossfadeValue = document.getElementById('crossfade-value');
+    crossfadeSlider?.addEventListener('input', function() {
+        crossfadeValue.textContent = this.value + 's';
+    });
+    crossfadeSlider?.addEventListener('change', function() {
+        savePlaybackSetting('crossfadeDuration', parseFloat(this.value));
+    });
+
     // Load saved theme
     loadTheme();
     loadQuality();
     loadStreamQuality();
     loadDirectorySettings();
+    loadPlaybackSettings();
 
     // Context Menu
     document.addEventListener('click', () => {
@@ -2826,3 +2860,115 @@ function showNotification(message, type = 'success') {
         alert(message);
     }
 }
+
+// ================================
+// Playback Settings Management
+// ================================
+
+// Default playback settings
+const defaultPlaybackSettings = {
+    autoplay: false,
+    defaultVolume: 70,
+    crossfadeDuration: 0,
+    gapless: false
+};
+
+let playbackSettings = { ...defaultPlaybackSettings };
+
+// Load playback settings from localStorage
+function loadPlaybackSettings() {
+    try {
+        const saved = localStorage.getItem('playbackSettings');
+        if (saved) {
+            playbackSettings = { ...defaultPlaybackSettings, ...JSON.parse(saved) };
+        }
+
+        // Update UI
+        const autoplayToggle = document.getElementById('toggle-autoplay');
+        if (autoplayToggle) {
+            if (playbackSettings.autoplay) {
+                autoplayToggle.classList.add('active');
+            }
+        }
+
+        const gaplessToggle = document.getElementById('toggle-gapless');
+        if (gaplessToggle) {
+            if (playbackSettings.gapless) {
+                gaplessToggle.classList.add('active');
+            }
+        }
+
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeValue = document.getElementById('volume-value');
+        if (volumeSlider && volumeValue) {
+            volumeSlider.value = playbackSettings.defaultVolume;
+            volumeValue.textContent = playbackSettings.defaultVolume + '%';
+        }
+
+        const crossfadeSlider = document.getElementById('crossfade-slider');
+        const crossfadeValue = document.getElementById('crossfade-value');
+        if (crossfadeSlider && crossfadeValue) {
+            crossfadeSlider.value = playbackSettings.crossfadeDuration;
+            crossfadeValue.textContent = playbackSettings.crossfadeDuration + 's';
+        }
+
+        // Apply default volume to player if available
+        if (window.player && window.player.audio) {
+            window.player.audio.volume = playbackSettings.defaultVolume / 100;
+        }
+
+        // Handle autoplay on startup
+        if (playbackSettings.autoplay) {
+            handleAutoplay();
+        }
+    } catch (error) {
+        console.error('Failed to load playback settings:', error);
+    }
+}
+
+// Save individual playback setting
+function savePlaybackSetting(key, value) {
+    try {
+        playbackSettings[key] = value;
+        localStorage.setItem('playbackSettings', JSON.stringify(playbackSettings));
+        console.log(`Playback setting saved: ${key} = ${value}`);
+    } catch (error) {
+        console.error('Failed to save playback setting:', error);
+    }
+}
+
+// Handle autoplay on startup
+async function handleAutoplay() {
+    try {
+        // Wait a bit for player to be ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!window.player) return;
+
+        // Get last played track from localStorage
+        const lastTrackId = localStorage.getItem('lastPlayedTrackId');
+        const lastPosition = parseFloat(localStorage.getItem('lastPlayedPosition') || '0');
+
+        if (lastTrackId) {
+            // Try to find track in database
+            const track = await ipcRenderer.invoke('db-get-track-by-youtube-id', lastTrackId);
+            if (track) {
+                // Resume playback
+                await window.player.loadAndPlayTrack(track);
+                if (lastPosition > 0 && window.player.audio) {
+                    window.player.audio.currentTime = lastPosition;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Autoplay failed:', error);
+    }
+}
+
+// Export playback settings for use in player
+function getPlaybackSettings() {
+    return playbackSettings;
+}
+
+// Make it globally accessible
+window.getPlaybackSettings = getPlaybackSettings;

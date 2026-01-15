@@ -84,6 +84,13 @@ class AudioPlayer {
     }
 
     setupEventListeners() {
+        // Apply default volume from settings
+        const settings = window.getPlaybackSettings?.() || {};
+        const defaultVolume = settings.defaultVolume || 70;
+        this.audio.volume = defaultVolume / 100;
+        this.volumeBar.value = defaultVolume;
+        this.updateVolumeIcon();
+
         // Play/Pause
         this.btnPlayPause.addEventListener('click', () => this.togglePlayPause());
 
@@ -159,6 +166,23 @@ class AudioPlayer {
         this.audio.addEventListener('pause', () => this.onPause());
         this.audio.addEventListener('error', (e) => this.onError(e));
         this.audio.addEventListener('loadedmetadata', () => this.onMetadataLoaded());
+
+        // Crossfade logic - start fading out before track ends
+        this.audio.addEventListener('timeupdate', () => {
+            if (this.currentTrack && this.hasNext()) {
+                const settings = window.getPlaybackSettings?.() || {};
+                const crossfadeDuration = settings.crossfadeDuration || 0;
+                
+                if (crossfadeDuration > 0) {
+                    const timeLeft = this.audio.duration - this.audio.currentTime;
+                    if (timeLeft <= crossfadeDuration && timeLeft > 0) {
+                        // Start fading out
+                        const fadeProgress = 1 - (timeLeft / crossfadeDuration);
+                        this.audio.volume = (1 - fadeProgress) * (this.volumeBar.value / 100);
+                    }
+                }
+            }
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -593,7 +617,17 @@ class AudioPlayer {
         }
 
         if (nextTrack) {
-            await this.loadAndPlayTrack(nextTrack);
+            // Handle gapless playback - reduce delay
+            const settings = window.getPlaybackSettings?.() || {};
+            if (settings.gapless) {
+                // Minimal delay for gapless
+                await this.loadAndPlayTrack(nextTrack);
+            } else {
+                // Normal playback
+                await this.loadAndPlayTrack(nextTrack);
+            }
+            // Show playback source
+            this.updatePlaybackSourceUI();
             // Preload more tracks
             this.preloadUpcomingTracks();
         }
@@ -915,6 +949,18 @@ class AudioPlayer {
 
             } catch (error) {
                 console.error('Failed to restore playback state:', error);
+            }
+        }
+    }
+
+    savePlaybackState() {
+        // Save current track and position for autoplay feature
+        if (this.currentTrack && this.audio.currentTime > 0) {
+            try {
+                localStorage.setItem('lastPlayedTrackId', this.currentTrack.youtube_id);
+                localStorage.setItem('lastPlayedPosition', this.audio.currentTime.toString());
+            } catch (error) {
+                console.error('Failed to save playback state:', error);
             }
         }
     }
