@@ -279,7 +279,8 @@
                                     <p class="setting-description">Automatically download songs when you like them</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch" id="toggle-auto-download" data-setting="autoDownload"></div>
+                                    <div class="toggle-switch" id="toggle-auto-download" data-setting="autoDownload">
+                                    </div>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -289,8 +290,8 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
-                                        <input type="range" id="concurrent-downloads-slider" class="slider-input" min="1" max="5"
-                                            value="3" step="1">
+                                        <input type="range" id="concurrent-downloads-slider" class="slider-input"
+                                            min="1" max="5" value="3" step="1">
                                         <span id="concurrent-downloads-value" class="slider-value">3</span>
                                     </div>
                                 </div>
@@ -301,7 +302,8 @@
                                     <p class="setting-description">Add album art and lyrics to downloaded files</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch" id="toggle-embed-metadata" data-setting="embedMetadata"></div>
+                                    <div class="toggle-switch" id="toggle-embed-metadata" data-setting="embedMetadata">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -356,8 +358,8 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
-                                        <input type="range" id="cache-size-slider" class="slider-input" min="50" max="500"
-                                            value="200" step="50">
+                                        <input type="range" id="cache-size-slider" class="slider-input" min="50"
+                                            max="500" value="200" step="50">
                                         <span id="cache-size-value" class="slider-value">200 MB</span>
                                     </div>
                                 </div>
@@ -369,8 +371,8 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
-                                        <input type="range" id="buffer-size-slider" class="slider-input" min="5" max="30"
-                                            value="10" step="5">
+                                        <input type="range" id="buffer-size-slider" class="slider-input" min="5"
+                                            max="30" value="10" step="5">
                                         <span id="buffer-size-value" class="slider-value">10s</span>
                                     </div>
                                 </div>
@@ -382,8 +384,8 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
-                                        <input type="range" id="network-timeout-slider" class="slider-input" min="10" max="60"
-                                            value="30" step="5">
+                                        <input type="range" id="network-timeout-slider" class="slider-input" min="10"
+                                            max="60" value="30" step="5">
                                         <span id="network-timeout-value" class="slider-value">30s</span>
                                     </div>
                                 </div>
@@ -395,8 +397,8 @@
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
-                                        <input type="range" id="max-results-slider" class="slider-input" min="10" max="50"
-                                            value="20" step="5">
+                                        <input type="range" id="max-results-slider" class="slider-input" min="10"
+                                            max="50" value="20" step="5">
                                         <span id="max-results-value" class="slider-value">20</span>
                                     </div>
                                 </div>
@@ -435,7 +437,8 @@
                             <div class="setting-item">
                                 <div class="setting-info">
                                     <label>Auto-clear History</label>
-                                    <p class="setting-description">Automatically clear history after X days (0 = disabled)</p>
+                                    <p class="setting-description">Automatically clear history after X days (0 =
+                                        disabled)</p>
                                 </div>
                                 <div class="setting-control">
                                     <div class="slider-control">
@@ -455,7 +458,8 @@
                                     <p class="setting-description">Show notification when downloads complete</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch active" id="toggle-download-notification" data-setting="downloadNotification"></div>
+                                    <div class="toggle-switch active" id="toggle-download-notification"
+                                        data-setting="downloadNotification"></div>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -464,7 +468,8 @@
                                     <p class="setting-description">Show notification when downloads fail</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch active" id="toggle-download-error-notification" data-setting="downloadErrorNotification"></div>
+                                    <div class="toggle-switch active" id="toggle-download-error-notification"
+                                        data-setting="downloadErrorNotification"></div>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -473,7 +478,8 @@
                                     <p class="setting-description">Show notification when a new track starts playing</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch" id="toggle-now-playing-notification" data-setting="nowPlayingNotification"></div>
+                                    <div class="toggle-switch" id="toggle-now-playing-notification"
+                                        data-setting="nowPlayingNotification"></div>
                                 </div>
                             </div>
                             <div class="setting-item">
@@ -482,16 +488,19 @@
                                     <p class="setting-description">Show notification when playback fails</p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch active" id="toggle-playback-error-notification" data-setting="playbackErrorNotification"></div>
+                                    <div class="toggle-switch active" id="toggle-playback-error-notification"
+                                        data-setting="playbackErrorNotification"></div>
                                 </div>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-info">
                                     <label>Library Updates</label>
-                                    <p class="setting-description">Show notification when tracks are added to library</p>
+                                    <p class="setting-description">Show notification when tracks are added to library
+                                    </p>
                                 </div>
                                 <div class="setting-control">
-                                    <div class="toggle-switch" id="toggle-library-notification" data-setting="libraryNotification"></div>
+                                    <div class="toggle-switch" id="toggle-library-notification"
+                                        data-setting="libraryNotification"></div>
                                 </div>
                             </div>
                         </div>
@@ -590,7 +599,8 @@
             <div class="player-volume">
                 <button id="btn-mini-player" class="btn-player btn-mini-player" title="Open Mini Player">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                        <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/>
+                        <path
+                            d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z" />
                     </svg>
                 </button>
                 <button id="btn-volume" class="btn-player" title="Mute/Unmute">

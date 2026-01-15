@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UB-WaveX Mini Player</title>
     <link rel="stylesheet" href="miniplayer.css">
 </head>
+
 <body data-theme="dark">
     <div class="mini-player-container">
         <div class="mini-player-header">
             <div class="drag-area"></div>
             <button class="mini-close-btn" id="close-mini-player" title="Close Mini Player">×</button>
         </div>
-        
+
         <div class="mini-track-info">
             <img id="mini-thumbnail" src="" alt="Album Art" class="mini-thumbnail">
             <div class="mini-text-info">
@@ -36,15 +38,17 @@
                 <img src="../public/previousWhite.png" class="mini-icon theme-icon" data-icon="previous" alt="Previous">
             </button>
             <button class="mini-control-btn mini-play-btn" id="mini-play-pause" title="Play">
-                <img id="mini-play-icon" src="../public/playWhite.png" class="mini-icon play-pause-icon theme-icon" data-icon="play" alt="Play">
-                <img id="mini-pause-icon" src="../public/pauseWhite.png" class="mini-icon play-pause-icon theme-icon" data-icon="pause" alt="Pause" style="display: none;">
+                <img id="mini-play-icon" src="../public/playWhite.png" class="mini-icon play-pause-icon theme-icon"
+                    data-icon="play" alt="Play">
+                <img id="mini-pause-icon" src="../public/pauseWhite.png" class="mini-icon play-pause-icon theme-icon"
+                    data-icon="pause" alt="Pause" style="display: none;">
             </button>
             <button class="mini-control-btn" id="mini-next" title="Next">
                 <img src="../public/nextWhite.png" class="mini-icon theme-icon" data-icon="next" alt="Next">
             </button>
             <button class="mini-control-btn" id="mini-expand" title="Expand to Main Window">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M4 4h6v2H6v4H4V4m16 0v6h-2V6h-4V4h6m-6 16v-2h4v-4h2v6h-6M4 14h2v4h4v2H4v-6z"/>
+                    <path d="M4 4h6v2H6v4H4V4m16 0v6h-2V6h-4V4h6m-6 16v-2h4v-4h2v6h-6M4 14h2v4h4v2H4v-6z" />
                 </svg>
             </button>
         </div>
@@ -52,4 +56,5 @@
 
     <script src="miniplayer.js"></script>
 </body>
+
 </html>

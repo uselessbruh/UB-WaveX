@@ -613,7 +613,7 @@ async function performSearch() {
     try {
         // Get max results from performance settings
         const maxResults = performanceSettings.maxSearchResults || 20;
-        
+
         // Online search
         const result = await ipcRenderer.invoke('search-music', { query, limit: maxResults });
 
@@ -2360,7 +2360,7 @@ function loadSearchHistory() {
 async function loadRecentPlays() {
     try {
         const result = await ipcRenderer.invoke('db-get-recent-plays');
-        
+
         console.log('Recent plays result:', result);
 
         recentPlaysList.innerHTML = '';
@@ -2374,7 +2374,7 @@ async function loadRecentPlays() {
                 const cube = createRecentPlayCube(track);
                 recentPlaysList.appendChild(cube);
             });
-            
+
             console.log('Recent plays loaded:', enrichedTracks.length, 'tracks');
         } else {
             console.log('No recent plays found');
@@ -2435,7 +2435,7 @@ function createRecentPlayCube(track) {
 
     cube.appendChild(title);
     cube.appendChild(artist);
-    
+
     // Check if marquee is needed after adding to DOM
     setTimeout(() => {
         if (titleInner.scrollWidth > title.clientWidth) {
@@ -3047,13 +3047,13 @@ async function handleManualDirectoryInput(type, path) {
                 async () => {
                     // User clicked OK - create directory
                     const createResult = await ipcRenderer.invoke('create-directory', { path });
-                    
+
                     if (!createResult.success) {
                         showNotification(`Failed to create directory: ${createResult.error}`, 'error');
                         await loadDirectorySettings(); // Restore previous value
                         return;
                     }
-                    
+
                     // Directory created successfully, update settings
                     if (type === 'download') {
                         currentSettings.downloadDirectory = path;
@@ -3289,7 +3289,7 @@ function saveDownloadSetting(key, value) {
         downloadSettings[key] = value;
         localStorage.setItem('downloadSettings', JSON.stringify(downloadSettings));
         console.log(`Download setting saved: ${key} = ${value}`);
-        
+
         // Send updated settings to main process
         ipcRenderer.invoke('update-download-settings', downloadSettings).catch(err => {
             console.error('Failed to update download settings:', err);
@@ -3431,7 +3431,7 @@ async function clearCache() {
     try {
         // Clear Python cache
         await ipcRenderer.invoke('clear-cache');
-        
+
         // Clear localStorage cache-related items (if any)
         // Refresh the UI
         showModal('Success', 'Cache cleared successfully!', 'alert');
@@ -3472,7 +3472,7 @@ function checkAutoClearHistory() {
     try {
         const lastClearDate = localStorage.getItem('lastAutoClearDate');
         const now = Date.now();
-        const daysSinceLastClear = lastClearDate 
+        const daysSinceLastClear = lastClearDate
             ? (now - parseInt(lastClearDate)) / (1000 * 60 * 60 * 24)
             : privacySettings.autoClearDays + 1; // Force clear if never cleared
 
@@ -3679,7 +3679,7 @@ function showModal(title, message, type = 'alert', onConfirm = null, onCancel = 
 
         // Show modal
         overlay.classList.add('visible');
-        
+
         // Focus appropriate button
         setTimeout(() => {
             if (type === 'alert') {

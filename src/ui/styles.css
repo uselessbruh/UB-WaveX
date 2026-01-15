@@ -1327,7 +1327,8 @@ body {
     line-height: 1.4;
     position: relative;
     overflow: hidden;
-    max-height: 2.8em; /* 2 lines */
+    max-height: 2.8em;
+    /* 2 lines */
 }
 
 .cube-title-inner {
@@ -1344,6 +1345,7 @@ body {
     0% {
         transform: translateX(0);
     }
+
     100% {
         transform: translateX(-50%);
     }
@@ -1851,6 +1853,7 @@ body {
     background-color: var(--bg-hover);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
+
 /* Modal Dialog */
 .modal-overlay {
     display: none;
@@ -1874,6 +1877,7 @@ body {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1894,6 +1898,7 @@ body {
         transform: translateY(-20px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;

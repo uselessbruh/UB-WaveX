@@ -677,12 +677,12 @@ class AudioPlayer {
             this.audio.currentTime = 0;
         }
     }
-    
+
     hasNext() {
         // Check if there are more tracks to play
         return this.temporaryQueue.length > 0 || this.contextQueueIndex < this.contextQueue.length - 1;
     }
-    
+
     hasPrevious() {
         // Check if we can go back
         return this.contextQueueIndex > 0 || this.audio.currentTime > 3;
@@ -691,7 +691,7 @@ class AudioPlayer {
     toggleMiniPlayer() {
         const { ipcRenderer } = require('electron');
         const btnMiniPlayer = document.getElementById('btn-mini-player');
-        
+
         if (this.miniPlayerOpen) {
             ipcRenderer.send('close-mini-player');
             btnMiniPlayer.classList.remove('active');
@@ -706,7 +706,7 @@ class AudioPlayer {
 
     sendMiniPlayerUpdate() {
         const { ipcRenderer } = require('electron');
-        
+
         const data = {
             track: this.currentTrack ? {
                 title: this.currentTrack.title,
@@ -803,7 +803,7 @@ class AudioPlayer {
             playPauseIcon.dataset.icon = 'pause';
             playPauseIcon.alt = 'Pause';
         }
-        
+
         // Record playback start
         if (this.currentTrack && this.currentTrack.id && !this.playbackRecorded) {
             this.recordPlayback(false);
@@ -828,10 +828,10 @@ class AudioPlayer {
         if (this.currentTrack && this.currentTrack.id) {
             await this.recordPlayback(true);
         }
-        
+
         // Reset playback tracking
         this.playbackRecorded = false;
-        
+
         // Auto-play next track based on Spotify queue logic
         if (this.playbackContext.type === 'online' && this.temporaryQueue.length === 0) {
             // Single track from search with no queued tracks - don't auto-play
@@ -977,13 +977,13 @@ class AudioPlayer {
             console.log('Saved playback state:', state);
         }
     }
-    
+
     async recordPlayback(completed = false) {
         if (!this.currentTrack || !this.currentTrack.id) {
             console.log('Cannot record playback: no track or track ID');
             return;
         }
-        
+
         try {
             const playDuration = this.trackStartTime ? Math.floor((Date.now() - this.trackStartTime) / 1000) : 0;
             console.log('Recording playback:', {
@@ -992,15 +992,15 @@ class AudioPlayer {
                 playDuration: playDuration,
                 completed: completed
             });
-            
+
             await window.ipcRenderer.invoke('db-record-playback', {
                 trackId: this.currentTrack.id,
                 playDuration: playDuration,
                 completed: completed
             });
-            
+
             console.log('Playback recorded successfully');
-            
+
             // Refresh recent plays in UI if on search view
             if (window.renderer && typeof window.renderer.loadRecentPlays === 'function') {
                 await window.renderer.loadRecentPlays();

@@ -33,7 +33,7 @@ function applyTheme(theme) {
 
 function updateIcons(theme) {
     const suffix = theme === 'light' ? 'Black' : 'White';
-    
+
     // Update all theme icons
     document.querySelectorAll('.theme-icon').forEach(icon => {
         const iconType = icon.dataset.icon;
@@ -61,7 +61,7 @@ ipcRenderer.on('mini-player-update', (event, data) => {
         currentTrack = data.track;
         miniTitle.textContent = data.track.title || 'Unknown Title';
         miniArtist.textContent = data.track.artist || 'Unknown Artist';
-        
+
         if (data.track.thumbnail && data.track.thumbnail.trim() !== '') {
             miniThumbnail.src = data.track.thumbnail;
             miniThumbnail.classList.remove('hidden');

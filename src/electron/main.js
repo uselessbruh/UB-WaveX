@@ -278,7 +278,7 @@ ipcMain.handle('search-music', async (event, params) => {
     // Handle both old string format and new object format
     const query = typeof params === 'string' ? params : params.query;
     const limit = typeof params === 'object' ? params.limit : 20;
-    
+
     const results = await sendPythonRequest('search', { query, limit });
     return { success: true, data: results };
   } catch (error) {
@@ -1224,7 +1224,7 @@ ipcMain.handle('create-directory', async (event, { path: dirPath }) => {
 
     // Create directory recursively
     fs.mkdirSync(dirPath, { recursive: true });
-    
+
     // Verify it was created
     if (fs.existsSync(dirPath)) {
       return { success: true };
@@ -1337,7 +1337,7 @@ ipcMain.on('mini-player-action', (event, action, ...args) => {
     closeMiniPlayer();
     return;
   }
-  
+
   // For other actions, send to main window
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('mini-player-action', action, ...args);
