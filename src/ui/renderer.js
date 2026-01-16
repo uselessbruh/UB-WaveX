@@ -2776,7 +2776,7 @@ async function removeAllDownloads() {
         const result = await ipcRenderer.invoke('db-get-downloads');
         if (result.success && result.data && result.data.length > 0) {
             const count = result.data.length;
-            
+
             showConfirm(`Delete all ${count} download(s)?`, async () => {
                 try {
                     let deletedCount = 0;
@@ -2826,7 +2826,7 @@ async function removeAllLiked() {
         const result = await ipcRenderer.invoke('db-get-liked');
         if (result.success && result.data && result.data.length > 0) {
             const count = result.data.length;
-            
+
             showConfirm(`Unlike all ${count} song(s)?`, async () => {
                 try {
                     let unlikedCount = 0;
@@ -3038,24 +3038,24 @@ ipcRenderer.on('stop-track-for-deletion', (event, youtubeId) => {
         window.player.currentTrack.youtube_id === youtubeId) {
         // Stop playback completely and release file handle
         window.player.pause();
-        
+
         // Multiple attempts to release the file handle (Windows holds files tightly)
         const audio = window.player.audio;
         audio.pause();
         audio.removeAttribute('src');
         audio.src = '';
         audio.load(); // Force release of file handle
-        
+
         // Additional cleanup - set source to data URL to ensure file is released
         audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
         audio.load();
-        
+
         // Clear current track
         const wasPlaying = window.player.isPlaying;
         window.player.currentTrack = null;
         window.player.isPlaying = false;
         window.player.updatePlayerUI();
-        
+
         // If was playing and has next track, play next after a longer delay
         if (wasPlaying && window.player.hasNext()) {
             setTimeout(() => {

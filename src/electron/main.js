@@ -725,7 +725,7 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
     if (filePath && fs.existsSync(filePath)) {
       let deleteSuccess = false;
       let lastError = null;
-      
+
       // Try up to 5 times with longer delays for Windows file handles
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
@@ -750,7 +750,7 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
           }
         }
       }
-      
+
       // If still failed after retries, return error
       if (!deleteSuccess && lastError && (lastError.code === 'EBUSY' || lastError.code === 'EPERM')) {
         console.error(`Failed to delete file after 5 attempts: ${filePath}`, lastError);
