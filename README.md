@@ -1,19 +1,129 @@
-# UB-WaveX
+# UB-WaveX 🎵
 
-A full-featured desktop music streaming and downloading application built with Electron and Python.
+<div align="center">
 
-## Features
+![UB-WaveX Logo](mainpage/wavexwhite.png)
+
+**Music Reimagined**
+
+A powerful, fast, and completely free desktop music streaming and downloading application.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://github.com/uselessbruh/UB-WaveX/releases)
+[![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red.svg)](https://github.com/uselessbruh/UB-WaveX)
+
+[Download](#-download) • [Features](#-features) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🎯 What is UB-WaveX?
+
+UB-WaveX is a full-featured desktop music application that lets you stream, download, and organize your favorite music with complete privacy. All operations are performed locally on your device - no cloud services, no tracking, no ads. Just pure music enjoyment.
+
+### ✨ Why Choose UB-WaveX?
+
+- **🔒 100% Private** - Everything runs locally on your device
+- **💻 Offline Processing** - No backend servers, no data collection
+- **✨ Completely Free** - Open source and free forever
+- **🎵 High Quality** - Download in best available quality (up to 320kbps)
+- **🎨 Modern UI** - Spotify-like interface with dark/light themes
+- **📂 Smart Organization** - Playlists, liked songs, and powerful library management
+
+## 📥 Download
+
+Choose the version that matches your system:
+
+### Windows Releases
+
+| Version | Type | Size | Download |
+|---------|------|------|----------|
+| **Windows 64-bit** | Installer | 135.5 MB | [Download](https://github.com/uselessbruh/UB-WaveX/releases/latest/download/WaveX.Setup.1.0.0-x64.exe) ⭐ Recommended |
+| **Windows 64-bit** | Portable ZIP | 171.4 MB | [Download](https://github.com/uselessbruh/UB-WaveX/releases/latest/download/WaveX-1.0.0-win-x64.zip) |
+| **Windows 32-bit** | Installer | 124.6 MB | [Download](https://github.com/uselessbruh/UB-WaveX/releases/latest/download/WaveX.Setup.1.0.0-ia32.exe) |
+| **Windows 32-bit** | Portable ZIP | 157.4 MB | [Download](https://github.com/uselessbruh/UB-WaveX/releases/latest/download/WaveX-1.0.0-win-ia32.zip) |
+
+### Linux Releases (Coming Soon)
+
+- AppImage (Universal)
+- Debian/Ubuntu (.deb)
+
+### System Requirements
+
+- **OS**: Windows 10 or later
+- **Memory**: 4GB RAM minimum
+- **Storage**: 200MB free space
+- **Network**: Internet connection for streaming
+
+## 🚀 Features
+
+## 🚀 Features
+
+### Core Functionality
 
 - 🔍 **Search & Stream** - Search and play music directly from YouTube
-- ⬇️ **High-Quality Downloads** - Download tracks with embedded metadata and cover art
-- 📁 **Library Management** - Organize your music with downloads, liked songs, and playlists
-- 🎵 **Smart Playback** - Automatic queue management with track preloading
-- 🎨 **Modern UI** - Spotify-like interface with dark theme
+- ⬇️ **High-Quality Downloads** - Download tracks with embedded metadata and cover art (up to 320kbps)
+- 📁 **Library Management** - Organize your music with downloads, liked songs, and custom playlists
+- 🎵 **Smart Playback** - Automatic queue management with track preloading for seamless playback
+- 🎨 **Modern UI** - Beautiful, responsive Spotify-like interface with dark and light themes
 - 💾 **Offline Operation** - Runs entirely locally with no backend server required
 - 🖼️ **Cover Art** - Automatic fetching and caching from Cover Art Archive
-- 📊 **Metadata Resolution** - Enhanced metadata from MusicBrainz
+- 📊 **Metadata Resolution** - Enhanced metadata from MusicBrainz for accurate track information
 
-## Architecture
+### Advanced Features
+
+- **Queue Management**: Tracks auto-play sequentially in playlists
+- **Smart Preloading**: Next 5 tracks preload for uninterrupted playback
+- **Playlist Support**: Create unlimited playlists, add/remove tracks
+- **Search History**: Quick access to recent searches
+- **Keyboard Controls**: Space to play/pause, arrow keys for seeking
+- **Download Management**: Track download progress and manage your library
+
+## 🎬 Quick Start
+
+1. **Download** the installer for your platform from the [Download](#-download) section
+2. **Install** the application (or extract the portable ZIP)
+3. **Launch** UB-WaveX
+4. **Search** for your favorite music and start playing!
+
+No configuration needed - just install and enjoy your music!
+
+## 📖 Documentation
+
+### For Users
+
+#### Search and Play Music
+
+1. Enter a song name or artist in the search bar
+2. Click **Search** or press Enter
+3. Click on any track to play it immediately
+4. Use the player controls at the bottom
+
+#### Download Music
+
+- Click the download icon (⬇️) on any track
+- Downloaded tracks appear in the Downloads section
+- All downloads include full metadata and cover art
+
+#### Manage Your Library
+
+**Downloads Section**:
+- View all downloaded tracks
+- Play offline without internet
+
+**Liked Songs**:
+- Click the heart icon (❤️) to like a track
+- Access all liked songs in one place
+
+**Playlists**:
+- Create custom playlists with the **+** button
+- Add tracks by right-clicking
+- Download entire playlists at once
+
+### For Developers
+
+## 🛠️ Architecture
 
 ### Components
 
@@ -270,19 +380,150 @@ UB-WaveX/
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - See [LICENSE](LICENSE) file for details.
 
-## Credits
+## 🤝 Contributing
 
-- **yt-dlp** - YouTube audio extraction
-- **MusicBrainz** - Metadata resolution
-- **Cover Art Archive** - Album artwork
-- **Electron** - Desktop application framework
+We welcome contributions from the community! UB-WaveX is open source, and we'd love your help to make it even better.
 
-## Support
+### Ways to Contribute
 
-For issues, questions, or contributions, please create an issue in the project repository.
+- 🐛 **Report Bugs** - Found a bug? [Open an issue](https://github.com/uselessbruh/UB-WaveX/issues)
+- 💡 **Suggest Features** - Have an idea? We'd love to hear it!
+- 📝 **Improve Documentation** - Help make our docs clearer
+- 🔧 **Submit Pull Requests** - Fix bugs or add features
+- 🌍 **Translations** - Help translate UB-WaveX to other languages
+- ⭐ **Star the Repo** - Show your support!
+
+### Development Setup
+
+#### Prerequisites
+
+1. **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
+2. **Python** (3.10 or higher) - [Download](https://www.python.org/downloads/)
+3. **MySQL Server** (8.0 or higher) - [Download](https://dev.mysql.com/downloads/mysql/)
+4. **FFmpeg** - [Download](https://ffmpeg.org/download.html) and add to PATH
+
+#### Setup Instructions
+
+```bash
+# Clone the repository
+git clone https://github.com/uselessbruh/UB-WaveX.git
+cd UB-WaveX
+
+# Install Node dependencies
+npm install
+
+# Install Python dependencies
+cd src/python
+pip install -r requirements.txt
+cd ../..
+
+# Setup MySQL database
+mysql -u root -p < database/schema.sql
+
+# Run in development mode
+npm run dev
+```
+
+### Building from Source
+
+```bash
+# Build Python executable
+npm run build:python
+
+# Build Electron app
+npm run build
+```
+
+This creates installers in the `dist` folder.
+
+### Project Structure
+
+```
+UB-WaveX/
+├── src/
+│   ├── electron/
+│   │   └── main.js              # Electron main process
+│   ├── python/
+│   │   ├── music_core.py        # Python core logic
+│   │   ├── requirements.txt     # Python dependencies
+│   │   └── music_core.spec      # PyInstaller config
+│   └── ui/
+│       ├── index.html           # Main UI
+│       ├── styles.css           # Styling
+│       ├── renderer.js          # UI logic
+│       └── player.js            # Audio player engine
+├── mainpage/                     # Website/landing page
+├── database/
+│   └── schema.sql               # MySQL database schema
+├── package.json                 # Node.js configuration
+└── README.md                    # This file
+```
+
+### Contribution Guidelines
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
+
+Please ensure:
+- Code follows the existing style
+- All tests pass
+- Documentation is updated if needed
+- Commit messages are clear and descriptive
+
+## 🙏 Credits
+
+## 🙏 Credits
+
+This project is built with amazing open source technologies:
+
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - YouTube audio extraction
+- **[MusicBrainz](https://musicbrainz.org/)** - Metadata resolution
+- **[Cover Art Archive](https://coverartarchive.org/)** - Album artwork
+- **[Electron](https://www.electronjs.org/)** - Desktop application framework
+- **[Python](https://www.python.org/)** - Backend processing
+- **[MySQL](https://www.mysql.com/)** - Database management
+
+## 📞 Support
+
+Need help or have questions?
+
+- 📖 [Read the Documentation](#-documentation)
+- 🐛 [Report an Issue](https://github.com/uselessbruh/UB-WaveX/issues)
+- 💬 [Join Discussions](https://github.com/uselessbruh/UB-WaveX/discussions)
+- 📧 Contact: [Create an issue](https://github.com/uselessbruh/UB-WaveX/issues)
+
+## 🗺️ Roadmap
+
+### Upcoming Features
+
+- 🐧 Linux support (AppImage, .deb packages)
+- 🎚️ Equalizer and audio effects
+- 📱 Mobile companion app
+- 🌐 Multi-language support
+- 🔄 Cross-platform sync (optional, privacy-focused)
+- 🎨 Customizable themes and UI layouts
+
+### Community Requests
+
+Have a feature request? [Open an issue](https://github.com/uselessbruh/UB-WaveX/issues) and let us know!
+
+## ⚠️ Disclaimer
+
+UB-WaveX is designed for personal use with music you have the right to access. Users are responsible for complying with copyright laws and YouTube's Terms of Service in their jurisdiction.
 
 ---
 
+<div align="center">
+
 **UB-WaveX** - Your personal music streaming and downloading companion
+
+Made with ❤️ by the open source community
+
+[⭐ Star on GitHub](https://github.com/uselessbruh/UB-WaveX) • [🐛 Report Bug](https://github.com/uselessbruh/UB-WaveX/issues) • [💡 Request Feature](https://github.com/uselessbruh/UB-WaveX/issues)
+
+</div>

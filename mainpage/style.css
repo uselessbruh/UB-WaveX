@@ -96,6 +96,38 @@ body {
     color: var(--text-primary);
 }
 
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 1001;
+}
+
+.mobile-menu-toggle span {
+    width: 25px;
+    height: 2px;
+    background-color: var(--text-primary);
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(7px, 7px);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
 .theme-toggle {
     background-color: var(--button-bg);
     color: var(--button-text);
@@ -934,23 +966,56 @@ body {
 }
 
 /* Mobile Responsive Styles */
-/* Mobile Responsive Styles */
 @media (max-width: 968px) {
     .nav-container {
         padding: 0 20px;
     }
 
     .nav-links {
-        gap: 20px;
+        position: fixed;
+        top: 80px;
+        left: 0;
+        right: 0;
+        background-color: var(--bg-primary);
+        border-bottom: 1px solid var(--border-color);
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-links.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
     }
 
     .nav-link {
-        display: none;
+        display: block;
+        padding: 20px 40px;
+        border-bottom: 1px solid var(--border-color);
+        width: 100%;
+        text-align: left;
+    }
+
+    .theme-toggle {
+        margin: 20px 40px;
+        width: calc(100% - 80px);
     }
 
     .nav-btn {
-        padding: 8px 20px;
-        font-size: 13px;
+        margin: 0 40px 20px;
+        width: calc(100% - 80px);
+        text-align: center;
+        display: block;
+    }
+
+    .mobile-menu-toggle {
+        display: flex;
     }
 
     .hero-container {
@@ -988,8 +1053,13 @@ body {
     }
 
     .mockup-sidebar {
-        width: 120px;
-        padding: 16px 12px;
+        width: 60px;
+        padding: 16px 8px;
+    }
+
+    .sidebar-item {
+        width: 100%;
+        height: 40px;
     }
 
     .btn-primary,
@@ -998,14 +1068,20 @@ body {
         justify-content: center;
     }
 
+    .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
     .feature-badges {
         width: 100%;
+        flex-wrap: wrap;
     }
 
     .badge {
         flex: 1;
+        min-width: 150px;
         justify-content: center;
-        min-width: 0;
         font-size: 12px;
     }
 
@@ -1013,22 +1089,58 @@ body {
         font-size: 32px;
     }
 
+    .section-title p {
+        font-size: 15px;
+    }
+
     .features-grid {
         grid-template-columns: 1fr;
+        gap: 20px;
     }
 
     .download-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .system-requirements {
+        padding: 40px 20px;
+        margin: 40px 0;
+    }
+
+    .requirements-grid {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 480px) {
+    body {
+        padding-top: 70px;
+    }
+
+    .nav-container {
+        height: 70px;
+        padding: 0 15px;
+    }
+
+    .nav-links {
+        top: 70px;
+    }
+
     .nav-logo-img {
-        height: 40px;
+        height: 35px;
     }
 
     .hero-title {
-        font-size: 32px;
+        font-size: 28px;
+    }
+
+    .hero-description {
+        font-size: 14px;
+    }
+
+    .hero-logo {
+        height: 80px;
     }
 
     .feature-badges {
@@ -1037,6 +1149,36 @@ body {
 
     .badge {
         width: 100%;
+        min-width: 0;
+    }
+
+    .download-card {
+        padding: 20px;
+    }
+
+    .download-card h3 {
+        font-size: 18px;
+    }
+
+    .section-title h2 {
+        font-size: 28px;
+    }
+
+    .system-requirements h2 {
+        font-size: 28px;
+    }
+
+    .mockup-sidebar {
+        width: 50px;
+        padding: 12px 6px;
+    }
+
+    .sidebar-item {
+        height: 35px;
+    }
+
+    .music-wave-container {
+        gap: 6px;
     }
 }
 
