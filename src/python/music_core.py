@@ -6,6 +6,7 @@ Music extraction, metadata resolution, and download manager
 import sys
 import json
 import os
+import shutil
 from typing import Dict, Any, Optional
 import yt_dlp
 import requests
@@ -659,11 +660,14 @@ class IPCHandler:
                     elif command == 'clear_cache':
                         # Clear cache directory
                         if self.music_core.cache_dir.exists():
-                            for file in self.music_core.cache_dir.glob('*'):
+                            for item in self.music_core.cache_dir.glob('*'):
                                 try:
-                                    file.unlink()
+                                    if item.is_file():
+                                        item.unlink()
+                                    elif item.is_dir():
+                                        shutil.rmtree(item, ignore_errors=True)
                                 except Exception as e:
-                                    print(f"Failed to delete cache file {file}: {e}", file=sys.stderr)
+                                    print(f"Failed to delete cache item {item}: {e}", file=sys.stderr)
                     continue
                 
                 response = self.handle_request(request)

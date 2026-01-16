@@ -717,28 +717,47 @@ ipcMain.handle('delete-download', async (event, youtubeId) => {
     // If track is playing, notify renderer to stop it
     if (isPlaying) {
       mainWindow.webContents.send('stop-track-for-deletion', youtubeId);
-      // Wait a bit for the track to stop and file handle to be released
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait much longer for Windows to release the file handle
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Delete file from filesystem
+    // Delete file from filesystem with retry logic
     if (filePath && fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-        console.log(`Deleted file: ${filePath}`);
-      } catch (fileError) {
-        console.warn(`Failed to delete file: ${filePath}`, fileError);
+      let deleteSuccess = false;
+      let lastError = null;
+      
+      // Try up to 5 times with longer delays for Windows file handles
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted file: ${filePath}`);
+          deleteSuccess = true;
+          break;
+        } catch (fileError) {
+          lastError = fileError;
+          console.warn(`Delete attempt ${attempt + 1}/5 failed: ${filePath}`, fileError.message);
 
-        // If file is still busy, return error instead of continuing
-        if (fileError.code === 'EBUSY' || fileError.code === 'EPERM') {
-          return {
-            success: false,
-            error: 'File is currently in use. Please stop playback and try again.'
-          };
+          if (fileError.code === 'EBUSY' || fileError.code === 'EPERM') {
+            // Wait progressively longer before retrying (1s, 2s, 3s, 4s)
+            if (attempt < 4) {
+              const delay = 1000 * (attempt + 1);
+              console.log(`Waiting ${delay}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          } else {
+            // For non-busy errors, don't retry
+            break;
+          }
         }
-
-        // For other errors, log but continue with database deletion
-        console.warn('Continuing with database deletion despite file error');
+      }
+      
+      // If still failed after retries, return error
+      if (!deleteSuccess && lastError && (lastError.code === 'EBUSY' || lastError.code === 'EPERM')) {
+        console.error(`Failed to delete file after 5 attempts: ${filePath}`, lastError);
+        return {
+          success: false,
+          error: 'File is still locked after multiple attempts. The audio file may be held by Windows. Try again in a moment.'
+        };
       }
     }
 

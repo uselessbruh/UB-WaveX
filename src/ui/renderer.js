@@ -2765,6 +2765,107 @@ async function downloadAllPlaylist() {
     }
 }
 
+// Remove All Functions
+async function removeAllDownloads() {
+    if (!backendReady) {
+        showError('Backend is still initializing...');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-downloads');
+        if (result.success && result.data && result.data.length > 0) {
+            const count = result.data.length;
+            
+            showConfirm(`Delete all ${count} download(s)?`, async () => {
+                try {
+                    let deletedCount = 0;
+                    let failedCount = 0;
+
+                    for (const track of result.data) {
+                        try {
+                            const deleteResult = await ipcRenderer.invoke('delete-download', track.youtube_id);
+                            if (deleteResult.success) {
+                                deletedCount++;
+                            } else {
+                                failedCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Failed to delete track: ${track.title}`, error);
+                            failedCount++;
+                        }
+                    }
+
+                    if (deletedCount > 0) {
+                        showSuccess(`Deleted ${deletedCount} download(s)${failedCount > 0 ? ` (${failedCount} failed)` : ''}`);
+                        loadDownloads();
+                    } else {
+                        showError('Failed to delete downloads');
+                    }
+                } catch (error) {
+                    console.error('Failed to delete all downloads:', error);
+                    showError('Failed to delete downloads');
+                }
+            });
+        } else {
+            showInfo('No downloads to remove');
+        }
+    } catch (error) {
+        console.error('Failed to get downloads:', error);
+        showError('Failed to load downloads');
+    }
+}
+
+async function removeAllLiked() {
+    if (!backendReady) {
+        showError('Backend is still initializing...');
+        return;
+    }
+
+    try {
+        const result = await ipcRenderer.invoke('db-get-liked');
+        if (result.success && result.data && result.data.length > 0) {
+            const count = result.data.length;
+            
+            showConfirm(`Unlike all ${count} song(s)?`, async () => {
+                try {
+                    let unlikedCount = 0;
+                    let failedCount = 0;
+
+                    for (const track of result.data) {
+                        try {
+                            const unlikeResult = await ipcRenderer.invoke('db-toggle-like', track.youtube_id);
+                            if (unlikeResult.success) {
+                                unlikedCount++;
+                            } else {
+                                failedCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Failed to unlike track: ${track.title}`, error);
+                            failedCount++;
+                        }
+                    }
+
+                    if (unlikedCount > 0) {
+                        showSuccess(`Unliked ${unlikedCount} song(s)${failedCount > 0 ? ` (${failedCount} failed)` : ''}`);
+                        loadLikedSongs();
+                    } else {
+                        showError('Failed to unlike songs');
+                    }
+                } catch (error) {
+                    console.error('Failed to unlike all songs:', error);
+                    showError('Failed to unlike songs');
+                }
+            });
+        } else {
+            showInfo('No liked songs to remove');
+        }
+    } catch (error) {
+        console.error('Failed to get liked songs:', error);
+        showError('Failed to load liked songs');
+    }
+}
+
 // View Context Menu Functions
 function showViewContextMenu(event, viewType) {
     event.preventDefault();
@@ -2935,14 +3036,31 @@ ipcRenderer.on('stop-track-for-deletion', (event, youtubeId) => {
     if (window.player &&
         window.player.currentTrack &&
         window.player.currentTrack.youtube_id === youtubeId) {
-        // Stop playback and move to next track or clear
-        if (window.player.hasNext()) {
-            window.player.playNext();
-        } else {
-            window.player.pause();
-            window.player.audio.src = '';
-            window.player.currentTrack = null;
-            window.player.updatePlayerUI();
+        // Stop playback completely and release file handle
+        window.player.pause();
+        
+        // Multiple attempts to release the file handle (Windows holds files tightly)
+        const audio = window.player.audio;
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.src = '';
+        audio.load(); // Force release of file handle
+        
+        // Additional cleanup - set source to data URL to ensure file is released
+        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+        audio.load();
+        
+        // Clear current track
+        const wasPlaying = window.player.isPlaying;
+        window.player.currentTrack = null;
+        window.player.isPlaying = false;
+        window.player.updatePlayerUI();
+        
+        // If was playing and has next track, play next after a longer delay
+        if (wasPlaying && window.player.hasNext()) {
+            setTimeout(() => {
+                window.player.playNext();
+            }, 1500);
         }
     }
 });
